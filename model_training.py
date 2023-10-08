@@ -23,7 +23,7 @@ Dataset source:
 
 
 """
-WGANs-GP to increase sizes of small samples for mild impairement cases
+WGANs-GP to increase sizes of small samples for mild impairment cases
 """
 
 def show_pictures_of_data(x_train, y_train, width, height):

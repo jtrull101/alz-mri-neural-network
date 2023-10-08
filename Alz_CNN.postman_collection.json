@@ -676,7 +676,7 @@
 						"predict"
 					]
 				},
-				"description": "No impairement - predict"
+				"description": "No impairment - predict"
 			},
 			"response": []
 		},
@@ -1158,7 +1158,7 @@
 						"predict"
 					]
 				},
-				"description": "No impairement - predict"
+				"description": "No impaiement - predict"
 			},
 			"response": []
 		},
@@ -1371,7 +1371,7 @@
 						"predict"
 					]
 				},
-				"description": "No impairement - predict"
+				"description": "No impairment - predict"
 			},
 			"response": []
 		},
@@ -1417,7 +1417,7 @@
 						"predict"
 					]
 				},
-				"description": "No impairement - predict"
+				"description": "No impairment - predict"
 			},
 			"response": []
 		}

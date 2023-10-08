@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>Alzheimers CNN Predictive Model</head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+
+    <body>
+        <font size="-3">  
+        <p>Simple Web App for an Alzheimers Machine Learning model using a hypothetical dataset.</p>
+        <p>Click one of the buttons below to pick one of the random images in the training set of ficticious MRI images.</p>
+        <p>&ensp; This image is run through the Convolutional Neural Network and the resulting prediction is printed above the image.</p>
+        <p>&ensp; Note this model currently has an accuracy of {{ model_accuracy }}, unless this number is 100%, predictions are not guaranteed to reflect the button clicked.</p>
+        <form method="post" action="/">
+            <input type="submit" value="No Impairment" name="impairment_val"/>
+            <input type="submit" value="Very Mild Impairment" name="impairment_val" />
+            <input type="submit" value="Mild Impairment" name="impairment_val" />
+            <input type="submit" value="Moderate Impairment" name="impairment_val" />
+        </form>
+        </font>
+    </body>
+    <br>
+    <br>
+    <br>
+    <!-- <div class="loader"></div> -->
+    <body>
+        <font size="-3">
+            Result: {{ result }}
+        </font>
+    </body>
+    <br>
+    <body>
+        <img src="{{ image }}">
+
+    </body>
+</html>
+

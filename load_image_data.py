@@ -46,9 +46,6 @@ class ImageDataset(object):
 
     def get_categories(self):
         for path in os.listdir(self.PATH):
-            # if '.DS_Store' in path:
-            #     pass
-            # else:
             if path not in self.list_categories:
                 self.list_categories.append(path)
         print("Found Categories ",self.list_categories,'\n')
