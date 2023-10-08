@@ -1,0 +1,8 @@
+flask
+wekzeug
+tensorflow
+keras
+tqdm
+cv2
+numpy
+
