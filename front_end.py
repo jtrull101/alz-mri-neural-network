@@ -61,7 +61,7 @@ def predict():
         return 'No file part'
     
     files = request.files.items(multi=True)
-    vals = {}
+    vals = []
     
     for f in files:
         # read and save file to output directory
@@ -69,9 +69,8 @@ def predict():
         filename = secure_filename(file.filename) # type: ignore
         filepath = f"{SCRIPT_DIR}/output/{filename}"
         file.save(filepath)
-        
         # predict image, remove file
-        vals[file.filename] = predict_image(cv2.imread(filepath)) 
+        vals.append(predict_image(filepath))
         os.remove(filepath)
  
     return vals

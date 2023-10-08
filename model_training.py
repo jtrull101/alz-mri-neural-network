@@ -118,7 +118,7 @@ def main():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     os.chdir(script_dir)
     
-    f = open('histories.txt', 'a')
+    f = open('logs/histories.txt', 'a')
     f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
     f.write(f"accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n")
                     
@@ -167,7 +167,7 @@ def main():
                         elapsed_time = f'{(end-start):.0f}'
                         acc_perc = f'{int(acc*100)}%'
                         data_perc = f'{int(d*100)}%'
-                        f = open('histories.txt', 'a')
+                        f = open('logs/histories.txt', 'a')
                         out = f"{acc_perc}, {data_perc}, {b}, {l}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
                         
                         if acc >= 0.95:
@@ -185,7 +185,7 @@ def main():
                         del history 
                     except Exception as ex:
                         # write out failure
-                        f = open('failures.txt', 'a')
+                        f = open('logs/failures.txt', 'a')
                         f.write(f"{(d,b,e)}, {ex}\n")
                         f.close()
                         time.sleep(5)
