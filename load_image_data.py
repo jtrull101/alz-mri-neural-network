@@ -51,7 +51,7 @@ class ImageDataset(object):
             # else:
             if path not in self.list_categories:
                 self.list_categories.append(path)
-        # print("Found Categories ",self.list_categories,'\n')
+        print("Found Categories ",self.list_categories,'\n')
         self.NUM_CATEGORIES = len(self.list_categories)
         return self.list_categories
 
@@ -71,7 +71,7 @@ class ImageDataset(object):
                     new_path = os.path.join(folder_path, img)                               # image Path
                     self.WIDTH, self.HEIGHT = Image.open(new_path).size
                     try:        # if any image is corrupted
-                        image_data_temp = cv2.imread(new_path)                 # Read Image as numbers
+                        image_data_temp = cv2.imread(new_path)                              # Read Image as numbers
                         image_temp_resize = cv2.resize(image_data_temp,(self.WIDTH, self.HEIGHT))
                         
                         self.image_data.append([image_temp_resize,class_index])
