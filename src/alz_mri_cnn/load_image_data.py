@@ -24,11 +24,17 @@ class ImageDataset(object):
         ) = ([], [], [], [], [])
 
     def get_num_categories(self) -> int:
+        """
+        Return the number of categories found in the directory associated with this image dataset
+        """
         if self.NUM_CATEGORIES == 0:
             self.get_categories()
         return self.NUM_CATEGORIES
 
     def get_width_height_from_imgs_in_path(self, path):
+        """
+        Get the first image in path and return the size associated
+        """
         for img in os.listdir(path):
             new_path = os.path.join(path, img)
             return Image.open(new_path).size
@@ -36,22 +42,28 @@ class ImageDataset(object):
         assert False
 
     def get_image_dimensions(self) -> Tuple[int, int]:
+        """
+        Get the WIDTH and HEIGHT associated with the images in this image dataset. Note this is using an assumption that
+            all images will be of the same size. Could use a tensorflow generator to force a consistent size
+        """
         if self.WIDTH and self.HEIGHT:
             return self.WIDTH, self.HEIGHT
 
         while not self.WIDTH or not self.HEIGHT:
             self.CATEGORIES = self.get_categories()
             for c in self.CATEGORIES:
-                folder_path = os.path.join(self.PATH, c)
                 self.WIDTH, self.HEIGHT = self.get_width_height_from_imgs_in_path(
-                    folder_path
+                    os.path.join(self.PATH, c)
                 )
                 if self.WIDTH and self.HEIGHT:
                     break
 
-        return self.WIDTH, self.HEIGHT  # type: ignore
+        return self.WIDTH, self.HEIGHT
 
     def get_categories(self):
+        """
+        Get all categories that can be found associated with this image dataset. Note that categories will be subdirectories in this dataset
+        """
         for path in os.listdir(self.PATH):
             if path not in self.list_categories:
                 self.list_categories.append(path)
