@@ -4,7 +4,6 @@ import os
 import keras
 import cv2
 import numpy as np
-import sys
 import random
 import shutil
 
@@ -15,7 +14,8 @@ CLASSES = [
     "Moderate Impairment",
     "Very Mild Impairment",
 ]
-SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+# SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 
 model = None
@@ -43,30 +43,32 @@ def on_start():
         return render_template("index.html")
 
     # anything to be displayed must be in the static dir, ensure only one picture is in there at a time
-    for p in os.listdir("static"):
+    for p in os.listdir(f"{SCRIPT_DIR}/static"):
         if ".jpg" in p:
             try:
-                os.remove(f"static/{p}")
+                os.remove(f"{SCRIPT_DIR}/static/{p}")
             except Exception as e:
                 print(f"encountered issue when removing image {p} from static dir: {e}")
 
-    shutil.copy(image, "static/")
+    shutil.copy(image, f"{SCRIPT_DIR}/static")
     index = image.rindex("/")
+    img_location = f"static/{image[index+1 : len(image)]}"
     return render_template(
         "index.html",
         model_accuracy=model_accuracy,
         result=prediction,
-        image=f"static/{image[index+1 : len(image)]}",
+        image=img_location,
     )
 
 
 def get_random_of_class(chosen_class):
-    for path in os.listdir("data/test/"):
+    dir = "data/test"
+    for path in os.listdir(dir):
         if path == chosen_class:
-            images = os.listdir(f"data/test/{path}")
+            images = os.listdir(f"{dir}/{path}")
     assert images
     image = random.choice(images)
-    return predict_image(f"data/test/{chosen_class}/{image}")
+    return predict_image(f"{dir}/{chosen_class}/{image}")
 
 
 def predict_image(path):

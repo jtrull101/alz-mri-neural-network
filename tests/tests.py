@@ -1,6 +1,9 @@
 import unittest
+import os
 from alz_mri_cnn.model_training import train_model, load_data
 from alz_mri_cnn.front_end import get_random_of_class, CLASSES
+
+SCRIPT_DIR = os.path.dirname(__file__)
 
 
 class TestMethods(unittest.TestCase):
