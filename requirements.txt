@@ -1,4 +1,4 @@
-tensorflow==1.15.0
+tensorflow==2.8.0
 keras==2.11.0
 flask==2.2.5
 werkzeug==2.2.3
