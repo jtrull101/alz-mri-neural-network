@@ -37,10 +37,9 @@ def get_model(model_dir=None):
 
 
 @app.route("/", methods=["POST", "GET"])
-@app.route("/index", methods=["POST", "GET"])
 def on_start():
     """
-    The homepage for this app - just display index.html. On a post (click) of a button (request.form.get('impairement_val')) show a random image
+    The homepage for this app - just display index.html. On a post (click) of a button (request.form.get('impairment_val')) show a random image
         of that class and the prediction the model gave.
     """
     if request.method == "POST":
@@ -97,7 +96,6 @@ def predict_image(path):
     x_data_reshape = np.reshape(x_data, (1, 128, 128, 3))
     probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
-    # return (path, CLASSES[max], probabilities[max])
     return (path, CLASSES[max], int(probabilities[0][max]*100))
 
 
@@ -125,5 +123,6 @@ def predict():
 
 if __name__ == "__main__":
     os.chdir(SCRIPT_DIR)
+    # When running from main - not pytest, need to get the model from /../../
     model = get_model(model_dir=f"{SCRIPT_DIR}/../../")
     app.run(debug=True)
