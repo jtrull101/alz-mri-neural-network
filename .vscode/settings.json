@@ -1,0 +1,12 @@
+{
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "editor.defaultFoldingRangeProvider": "ms-python.black-formatter",
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "python.analysis.autoFormatStrings": true,
+    "python.formatting.provider": "none",
+    "[toml]": {
+        "editor.defaultFormatter": "tamasfe.even-better-toml"
+    }
+}
