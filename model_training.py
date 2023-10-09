@@ -27,12 +27,12 @@ WGANs-GP to increase sizes of small samples for mild impairment cases
 """
 
 def show_pictures_of_data(x_train, y_train, width, height):
-    # previous_text = None
-    # for i,x in enumerate(x_train):
-    #     if previous_text: previous_text.set_visible(False)
-    #     previous_text = plt.text(0,-10,s=classes[y_train[i]])
-    #     plt.imshow(x.reshape(width,height,3))
-    #     plt.show()
+    previous_text = None
+    for i,x in enumerate(x_train):
+        if previous_text: previous_text.set_visible(False)
+        previous_text = plt.text(0,-10,s=classes[y_train[i]])
+        plt.imshow(x.reshape(width,height,3))
+        plt.show()
     pass
 
 def reduce_size_of_dataset(N, x_train, y_train, x_test, y_test, x_cv, y_cv):
@@ -56,10 +56,9 @@ def reduce_size_of_dataset(N, x_train, y_train, x_test, y_test, x_cv, y_cv):
     
 
 def load_data(N):
-    path = 'data/'
-
-    train = ImageDataset(PATH=f'{path}/train', TRAIN=True)
-    test  = ImageDataset(PATH=f'{path}/test',  TRAIN=False)
+    PATH = 'data/'
+    train = ImageDataset(PATH=f'{PATH}/train', TRAIN=True)
+    test  = ImageDataset(PATH=f'{PATH}/test',  TRAIN=False)
     
     # Load dataset
     x_train, y_train = train.load_data()
@@ -75,7 +74,7 @@ def load_data(N):
     y_cv    = tf.keras.utils.to_categorical(y_cv, num_classes)
      
     width, height = train.get_image_dimensions()
-    show_pictures_of_data(x_train, y_train, width, height)
+    # show_pictures_of_data(x_train, y_train, width, height)
     
     return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
     
@@ -113,6 +112,66 @@ def create_model(num_classes):
 
     return model
     
+def train_model(percent_of_data=0.99, num_epochs=25, batch_size=32, learning_rate=0.001):
+    model = None
+    try:
+        start = time.time()
+        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
+        model = create_model(num_classes)
+        
+        # Compile model
+        model.compile(
+            loss=tf.keras.losses.categorical_crossentropy,
+            optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+            metrics=['acc']
+        )
+        
+        model.build()
+        print(f"Model params:{model.count_params()}")
+
+        callbacks = callback()
+        history = model.fit(x_train, y_train,
+                batch_size=batch_size,
+                epochs=num_epochs,
+                verbose=1,                                  # type: ignore
+                validation_data=(x_cv, y_cv),
+                callbacks=[callbacks])
+        loss, acc = model.evaluate(x_test, y_test, verbose=0)   # type: ignore
+        
+        print('Test loss:', loss)
+        print('Test accuracy:', acc)
+        end = time.time()
+        elapsed_time = f'{(end-start):.0f}'
+        acc_perc = f'{int(acc*100)}%'
+        data_perc = f'{int(percent_of_data*100)}%'
+        
+        f = open('logs/histories.txt', 'a')
+        out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
+        if acc >= 0.95:
+            model.save(f'models/95-99/alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras')
+            f.write(out)
+            f.close() 
+        elif acc >= 0.5:
+            f.write(out)
+            f.close() 
+        else:
+            print(f"skipping write of model with acc:{acc_perc}")
+            
+        
+        del history 
+    except Exception as ex:
+        # write out failure
+        f = open('logs/failures.txt', 'a')
+        f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
+        f.close()
+        time.sleep(5)
+    finally:
+        # garbage collection
+        if model:
+            del model   
+        K.clear_session()
+        gc.collect() 
+    return True
     
 def main():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -136,65 +195,7 @@ def main():
         for e in epochs:
             for b in batch_sizes:
                 for l in learning_rates:
-                    model = None
-                    try:
-                        start = time.time()
-                        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(d)
-                        model = create_model(num_classes)
-                        
-                        # Compile model
-                        model.compile(
-                            loss=tf.keras.losses.categorical_crossentropy,
-                            optimizer=tf.keras.optimizers.Adam(learning_rate=l),
-                            metrics=['acc']
-                        )
-                        
-                        model.build()
-                        print(f"Model params:{model.count_params()}")
-
-                        callbacks = callback()
-                        history = model.fit(x_train, y_train,
-                                batch_size=b,
-                                epochs=e,
-                                verbose=1,                                  # type: ignore
-                                validation_data=(x_cv, y_cv),
-                                callbacks=[callbacks])
-                        loss, acc = model.evaluate(x_test, y_test, verbose=0)   # type: ignore
-                        
-                        print('Test loss:', loss)
-                        print('Test accuracy:', acc)
-                        end = time.time()
-                        elapsed_time = f'{(end-start):.0f}'
-                        acc_perc = f'{int(acc*100)}%'
-                        data_perc = f'{int(d*100)}%'
-                        f = open('logs/histories.txt', 'a')
-                        out = f"{acc_perc}, {data_perc}, {b}, {l}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
-                        
-                        if acc >= 0.95:
-                            model.save(f'models/95-99/alz_cnn_{acc_perc}_acc_{e}_es_{b}_bs_{l}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras')
-                            f.write(out)
-                            continue
-                        elif acc >= 0.5:
-                            f.write(out)
-                        else:
-                            print(f"skipping write of model with acc:{acc_perc}")
-                            
-                        f.close() 
-                        print(f"skipping model with accuracy: {acc_perc}")
-                        
-                        del history 
-                    except Exception as ex:
-                        # write out failure
-                        f = open('logs/failures.txt', 'a')
-                        f.write(f"{(d,b,e)}, {ex}\n")
-                        f.close()
-                        time.sleep(5)
-                    finally:
-                        # garbage collection
-                        if model:
-                            del model   
-                        K.clear_session()
-                        gc.collect() 
+                    train_model(d,e,b,l)
 
 if __name__ == '__main__': 
     main()

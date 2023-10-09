@@ -105,12 +105,12 @@ class ImageDataset(object):
             X_Data,Y_Data = img 
 
             # Write the Entire Data into a Pickle File
-            pickle_out = open(f'X_Data_{"train" if self.TRAIN else "test"}','wb')
+            pickle_out = open(f'data/X_Data_{"train" if self.TRAIN else "test"}','wb')
             pickle.dump(X_Data, pickle_out)
             pickle_out.close()
 
             # Write the Y Label Data
-            pickle_out = open(f'Y_Data_{"train" if self.TRAIN else "test"}', 'wb')
+            pickle_out = open(f'data/Y_Data_{"train" if self.TRAIN else "test"}', 'wb')
             pickle.dump(Y_Data, pickle_out)
             pickle_out.close()
 
@@ -120,10 +120,10 @@ class ImageDataset(object):
     def load_data(self) -> Tuple[np.ndarray,np.ndarray]:
         try:
             # Read the Data from Pickle Object
-            X_Temp = open(f'X_Data_{"train" if self.TRAIN else "test"}','rb')
+            X_Temp = open(f'data/X_Data_{"train" if self.TRAIN else "test"}','rb')
             X_Data = pickle.load(X_Temp)
             
-            Y_Temp = open(f'Y_Data_{"train" if self.TRAIN else "test"}','rb')
+            Y_Temp = open(f'data/Y_Data_{"train" if self.TRAIN else "test"}','rb')
             Y_Data = pickle.load(Y_Temp)
 
             print('Reading Dataset from Pickle Object')

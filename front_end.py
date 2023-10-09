@@ -11,16 +11,29 @@ import sys
 import random
 import shutil
 
-   
+
+CLASSES = ['Mild Impairment','No Impairment','Moderate Impairment','Very Mild Impairment']
 SCRIPT_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 app = Flask(__name__)
+
+model = None
 model_accuracy = None
+best_performing_model = 'alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras'
+model_accuracy = "98%"
+model_name = f"models/95-99/{best_performing_model}"    
+
+
+def get_model():
+    global model
+    if not model:
+        model = keras.models.load_model(model_name)
+    return model
 
 @app.route('/', methods=['POST','GET'])
 @app.route('/index', methods=['POST','GET'])
 def on_start():
     if request.method == 'POST':
-        image, prediction = test_random_of_class(request.form.get('impairment_val'))
+        image, prediction = get_random_of_class(request.form.get('impairment_val'))
         
     elif request.method == 'GET':
         return render_template('index.html')
@@ -37,10 +50,11 @@ def on_start():
     index = image.rindex("/")
     return render_template('index.html', model_accuracy=model_accuracy, result=prediction, image=f"static/{image[index+1 : len(image)]}")    
 
-def test_random_of_class(chosen_class):
+def get_random_of_class(chosen_class):
     for path in os.listdir("data/test/"):
         if path == chosen_class:
             images = os.listdir(f"data/test/{path}")
+            
     assert images 
     image = random.choice(images)      
     return predict_image(f"data/test/{chosen_class}/{image}")
@@ -51,9 +65,9 @@ def predict_image(path):
     data = np.asanyarray(image_resize, dtype=float)
     x_data = np.asarray(data) / (255.0) # Normalize Data
     x_data_reshape = np.reshape(x_data, (1,128,128,3))
-    probabilities = model.predict(x_data_reshape)
+    probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
-    return (path, ['Mild Impairment','No Impairment','Moderate Impairment','Very Mild Impairment'][max])
+    return (path, CLASSES[max])
     
 @app.route('/predict', methods=['POST']) #type:ignore
 def predict():
@@ -74,17 +88,12 @@ def predict():
         os.remove(filepath)
  
     return vals
-    
+
 
  
-model = None
+
 if __name__ == '__main__':
     os.chdir(SCRIPT_DIR)
-    best_performing_model = 'alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras'
-    model_accuracy = "98%"
-    model_name = f"{SCRIPT_DIR}/models/95-99/{best_performing_model}"
-    
-    if not model:
-        model = keras.models.load_model(model_name)
+    model = get_model()    
         
     app.run(debug=True, host="0.0.0.0", port=3000)
