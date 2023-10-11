@@ -44,7 +44,7 @@ def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_
         v1, v2 = train_test_split(df, test_size=test_size)
         return v1[:int(percent_of_data*len(imgs))], v2[:int(percent_of_data*len(imgs))]
 
-def load_data(percent_of_data: float, batch_size):
+def load_data(percent_of_data:float=0.5, batch_size=20):
     """
     Load all data from the expected train/ and test/ directories. Returns the number of classes/categories found in the training set, and all
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
@@ -187,7 +187,7 @@ def train_model(
         
         end = time.time()
         # Evaluate the model on the test set
-        loss, acc = model.evaluate_generator(test_gen, verbose=0)
+        loss, acc = model.evaluate(test_gen, verbose=0)
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
         acc_perc = f"{int(acc*100)}%"

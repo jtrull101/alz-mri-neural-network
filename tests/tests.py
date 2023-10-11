@@ -1,7 +1,7 @@
 import unittest
 import os
-from alz_mri_cnn.model_training import train_model, load_data
-from alz_mri_cnn.front_end import get_random_of_class, CLASSES
+from src.alz_mri_cnn.model_training import train_model, load_data
+from src.alz_mri_cnn.front_end import get_random_of_class, CLASSES
 
 SCRIPT_DIR = os.path.dirname(__file__)
 
@@ -27,5 +27,5 @@ class TestMethods(unittest.TestCase):
     """ TODO """
 
     def test_load_data(self):
-        result = load_data(0.5)
+        result = load_data()
         assert result
