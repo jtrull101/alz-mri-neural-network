@@ -9,7 +9,7 @@ on:
   - pull_request
 
 jobs:
-  Ubuntu-Testing:
+  testing:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
