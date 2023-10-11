@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from alz_mri_cnn.load_image_data import ImageDataset
 import sys
+from keras.preprocessing.image import ImageDataGenerator
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
@@ -19,9 +20,11 @@ Dataset source:
     https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy
 """
 
+
 def path_repair():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    return '../../' if "src/alz" in script_dir else ''
+    return "../../" if "src/alz" in script_dir else ""
+
 
 def reduce_size_of_dataset(
     percent_of_data: float, x_train, y_train, x_test, y_test, x_cv, y_cv
@@ -59,12 +62,14 @@ def load_data(percent_of_data: float):
     """
     # Create ImageDataset objects
     PATH = f"{path_repair()}data/"
+    
     train = ImageDataset(PATH=f"{PATH}/train", TRAIN=True)
     test = ImageDataset(PATH=f"{PATH}/test", TRAIN=False)
 
     # Load dataset
     x_train, y_train = train.load_data()
     x_test, y_test = test.load_data()
+    
     x_cv, x_test = np.array_split(x_test, 2)
     y_cv, y_test = np.array_split(y_test, 2)
 
@@ -229,9 +234,9 @@ def main():
     )
     f.close()
 
-    data_subets = [0.99]                    # may need to downsample images before using more data
-    epochs = [10, 25, 50, 75, 100]          # 'random' scaling numbers
-    batch_sizes = [32]                      # powers of 2
+    data_subets = [0.99]  # may need to downsample images before using more data
+    epochs = [10, 25, 50, 75, 100]  # 'random' scaling numbers
+    batch_sizes = [32]  # powers of 2
     learning_rates = [0.001, 0.01, 0.1, 1]
     for data_sub in data_subets:
         for epoch in epochs:
