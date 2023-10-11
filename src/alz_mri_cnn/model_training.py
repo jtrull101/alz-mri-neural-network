@@ -19,6 +19,9 @@ Dataset source:
     https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy
 """
 
+def path_repair():
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return '../../' if "src/alz" in script_dir else ''
 
 def reduce_size_of_dataset(
     percent_of_data: float, x_train, y_train, x_test, y_test, x_cv, y_cv
@@ -55,7 +58,7 @@ def load_data(percent_of_data: float):
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
     """
     # Create ImageDataset objects
-    PATH = "data/"
+    PATH = f"{path_repair()}data/"
     train = ImageDataset(PATH=f"{PATH}/train", TRAIN=True)
     test = ImageDataset(PATH=f"{PATH}/test", TRAIN=False)
 
@@ -191,14 +194,14 @@ def train_model(
                 model.save(
                     f"models/95-99/alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
                 )
-            f = open("logs/histories.log", "a")
+            f = open(f"{path_repair()}logs/histories.log", "a")
             f.write(out)
             f.close()
         # Delete the history object for garbage collection
         del history
     except Exception as ex:
         # Write failure and exception to log
-        f = open("logs/failures.log", "a")
+        f = open(f"{path_repair()}logs/failures.log", "a")
         f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         f.close()
         time.sleep(5)
@@ -219,7 +222,7 @@ def main():
     os.chdir(script_dir)
 
     # Create starting log, indicating structure of logs
-    f = open("logs/histories.log", "a")
+    f = open(f"{path_repair()}logs/histories.log", "a")
     f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
     f.write(
         "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"

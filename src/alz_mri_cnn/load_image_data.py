@@ -6,6 +6,43 @@ import cv2
 from typing import Tuple
 from tqdm import tqdm
 from PIL import Image
+import sys
+
+"""
+Refactor this code to use keras.preprocessing.image.ImageDataGenerator
+
+train_datagen = ImageDataGenerator(rescale=1./255)
+train_generator = train_datagen.flow_from_directory(
+    train_dir,
+    target_size=(150,150),
+    batch_size=20,
+    class_mode='binary'
+)
+
+test_datagen = ImageDataGenerator(rescale=1./255)
+validation_generator = test_datagen.flow_from_directory(
+    validation_dir,
+    target_size=(150,150),
+    batch_size=20,
+    class_mode='binary'
+)
+
+
+...build...compile...
+
+history = model.fit_generator(
+    train_generator,
+    steps_per_epoch=100,
+    epochs=15,
+    validation_data=validation_generator,
+    validation_steps=50,
+    verbose=2
+)
+"""
+
+def path_repair():
+    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return '../../' if "src/alz" in script_dir else ''
 
 
 class ImageDataset(object):
@@ -129,12 +166,12 @@ class ImageDataset(object):
             X_Data, Y_Data = img
 
             # Write the Entire Data into a Pickle File
-            pickle_out = open(f'data/X_Data_{"train" if self.TRAIN else "test"}', "wb")
+            pickle_out = open(f'{path_repair()}data/X_Data_{"train" if self.TRAIN else "test"}', "wb")
             pickle.dump(X_Data, pickle_out)
             pickle_out.close()
 
             # Write the Y Label Data
-            pickle_out = open(f'data/Y_Data_{"train" if self.TRAIN else "test"}', "wb")
+            pickle_out = open(f'{path_repair()}data/Y_Data_{"train" if self.TRAIN else "test"}', "wb")
             pickle.dump(Y_Data, pickle_out)
             pickle_out.close()
 
@@ -144,10 +181,10 @@ class ImageDataset(object):
     def load_data(self):
         try:
             # Read the Data from Pickle Object
-            X_Temp = open(f'data/X_Data_{"train" if self.TRAIN else "test"}', "rb")
+            X_Temp = open(f'{path_repair()}data/X_Data_{"train" if self.TRAIN else "test"}', "rb")
             X_Data = pickle.load(X_Temp)
 
-            Y_Temp = open(f'data/Y_Data_{"train" if self.TRAIN else "test"}', "rb")
+            Y_Temp = open(f'{path_repair()}data/Y_Data_{"train" if self.TRAIN else "test"}', "rb")
             Y_Data = pickle.load(Y_Temp)
 
             print("Reading Dataset from Pickle Object")

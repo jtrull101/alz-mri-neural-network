@@ -175,3 +175,4 @@ static/*.jpg
 *.pyo
 *.pyc
 logs/failures.txt
+*.Identifier
