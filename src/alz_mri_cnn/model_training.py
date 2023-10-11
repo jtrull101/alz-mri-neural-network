@@ -23,6 +23,7 @@ Dataset source:
 
 def path_repair():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    print(f'***script_dir:{script_dir}') 
     return "../../" if "src/alz" in script_dir else ""
 
 
