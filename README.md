@@ -9,8 +9,6 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
 
 
 <br />
@@ -42,7 +40,7 @@
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#why-make-this-project">Why Make This Project?</a>
       <ul>
         <li><a href="#built-with">Built With</a></li>
       </ul>
@@ -151,6 +149,8 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 Jonathan Trull - jttrull0@gmail.com
 
 Project Link: [https://github.com/jtrull101/alz-mri-neural-network](https://github.com/jtrull101/alz-mri-neural-network)
+
+[![LinkedIn][linkedin-shield]][linkedin-url]
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
