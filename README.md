@@ -64,96 +64,81 @@
 
 
 
-## About The Project
+## Why Make This Project?
 
-[![Product Name Screen Shot][product-screenshot]](https://127.0.0.1:5000)
+![Product Name Screen Shot](images/screenshot.jpg)
 
-There are many great README templates available on GitHub; however, I didn't find one that really suited my needs so I created this enhanced one. I want to create a README template so amazing that it'll be the last one you ever need -- I think this is it.
+In a deeply personal quest to combat a devastating and pervasive disease, I embarked on a journey to develop a neural network model to read fictitious MRI data and detect the early signs of Alzheimer's disease. This endeavor is motivated by a profound family history that has been haunted by Alzheimer's for generations. The emotional toll of Alzheimer's, coupled with the urgent need for early diagnosis and intervention, fueled my determination to make a difference.
 
-Here's why:
-* Your time should be focused on creating something amazing. A project that solves a problem and helps others
-* You shouldn't be doing the same tasks over and over like creating a README from scratch
-* You should implement DRY principles to the rest of your life :smile:
+My journey began by delving into the world of medical imaging and artificial intelligence. I gathered fictitious MRI data, sourced from [kaggle.com](https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy), which mirrors the complexities of real-world medical images, to construct a neural network model. This model has been meticulously trained to analyze subtle patterns and anomalies within the brain, with a specific focus on identifying the early indicators of Alzheimer's disease.
 
-Of course, no one template will serve all projects since your needs may be different. So I'll be adding more in the near future. You may also suggest changes by forking this repo and creating a pull request or opening an issue. Thanks to all the people have contributed to expanding this template!
-
-Use the `BLANK_README.md` to get started.
+My hope is that this project will serve as a beacon of hope for others facing Alzheimer's, a testament to the power of technology, and a tribute to the loved ones who have inspired it. Together, we can shine a light on this dark path and take meaningful steps toward early diagnosis, treatment, and ultimately, a cure for Alzheimer's disease.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 ### Built With
 
-Below are the major python frameworks used for this project
+Below are the major Python frameworks used for this project
 
-* ![Tensorflow][Tensorflow-url]
+* [Tensorflow](https://www.tensorflow.org/)
+* [Keras](https://keras.io/)
+* [Flask](https://flask.palletsprojects.com/en/3.0.x/)
+  
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-
-
 ## Getting Started
-TODO:
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
+Installing this software is as simple as the few steps below:
 
-### Prerequisites
+First, pull this git repo to a local directory and cd into that directory.
 
-To use this software, just pip install the included requirements.txt file.
+Then just pip install the included requirements.txt file.
 * requirements.txt
   ```sh
   pip install -r requirements.txt
   ```
 
-### Installation
-
-_Below is an example of how you can instruct your audience on installing and setting up your app. This template doesn't rely on any external dependencies or services._
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-   ```sh
-   git clone https://github.com/your_username_/Project-Name.git
-   ```
-3. Install NPM packages
-   ```sh
-   npm install
-   ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
-   ```
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 ## Usage
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+This software utility offers a simple and accessible way to predict Alzheimer's disease progression using MRI data. Here's how to use it:
 
-_For more examples, please refer to the [Documentation](https://example.com)_
+Starting the Web User Interface (UI):
+
+    Run the Flask Server:
+        Start the Flask web user interface by executing the front_end.py script.
+        ```sh
+        py front_end.py
+        ```
+
+Predicting Alzheimer's Diagnosis:
+
+    Sending MRI Files:
+        To predict Alzheimer's disease progression, send MRI image files to the http://127.0.0.1:5000/predict endpoint of the Flask server. Note these MRI files should be one of the fictitious MRIs present in the data/test/ directory. This model has zero ability to predict actual MRI images.
+
+    Interpreting Predictions:
+        The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
+            No Impairment
+            Very Mild Impairment
+            Mild Impairment
+            Moderate Impairment
+
+Using the Web UI:
+
+    Accessing the Web Interface:
+        Open your web browser and navigate to http://127.0.0.1:5000. This will take you to a basic Graphical User Interface (GUI).
+
+    Selecting Impairment Categories:
+        On the web UI, you will find four buttons, each corresponding to a different level of impairment.
+        By clicking on one of these buttons, you can initiate a prediction for that specific impairment category.
+
+    Testing the Model:
+        The utility will randomly select an MRI image from the training set for the chosen impairment category and run it through the predictive model.
+
+This utility provides a convenient and user-friendly way to predict Alzheimer's disease progression, making it accessible to both professionals and non-experts. By following these simple steps, you can quickly assess the likelihood of Alzheimer's disease in MRI images and gain insights into its progression.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-## Roadmap
-
-- [x] Add Changelog
-- [x] Add back to top links
-- [ ] Add Additional Templates w/ Examples
-- [ ] Add "components" document to easily copy & paste sections of the readme
-- [ ] Multi-language Support
-    - [ ] Chinese
-    - [ ] Spanish
-
-See the [open issues](https://github.com/othneildrew/Best-README-Template/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 ## License
 
@@ -161,36 +146,17 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
 ## Contact
 
-Your Name - [@your_twitter](https://twitter.com/your_username) - email@example.com
+Jonathan Trull - jttrull0@gmail.com
 
-Project Link: [https://github.com/your_username/repo_name](https://github.com/your_username/repo_name)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-## Acknowledgments
-
-Use this space to list resources you find helpful and would like to give credit to. I've included a few of my favorites to kick things off!
-
-* [Choose an Open Source License](https://choosealicense.com)
-* [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
-* [Malven's Flexbox Cheatsheet](https://flexbox.malven.co/)
-* [Malven's Grid Cheatsheet](https://grid.malven.co/)
-* [Img Shields](https://shields.io)
-* [GitHub Pages](https://pages.github.com)
-* [Font Awesome](https://fontawesome.com)
-* [React Icons](https://react-icons.github.io/react-icons/search)
+Project Link: [https://github.com/jtrull101/alz-mri-neural-network](https://github.com/jtrull101/alz-mri-neural-network)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/jonathan--trull
-[product-screenshot]: images/screenshot.png
-[Tensorflow-url]: https://www.tensorflow.org/
 ![Tests](https://github.com/jtrull101/alz-mri-neural-network/actions/workflows/tests.yml/badge.svg)
