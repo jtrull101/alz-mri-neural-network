@@ -8,9 +8,10 @@ import logging
 import gc
 import time
 from datetime import datetime
-from alz_mri_cnn.load_image_data import ImageDataset
 import sys
 from keras.preprocessing.image import ImageDataGenerator
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
@@ -25,66 +26,71 @@ def path_repair():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     return "../../" if "src/alz" in script_dir else ""
 
+def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_of_data):
+    imgs = []
+    labels = []
+    for sub_dir in os.listdir(f"{directory}"):
+        image_list=os.listdir(os.path.join(f"{directory}",sub_dir))  #list of all image names in the directory
+        image_list = list(map(lambda x:os.path.join(sub_dir,x),image_list))
+        imgs.extend(image_list)
+        labels.extend([sub_dir]*len(image_list)) 
+    
+    df = pd.DataFrame({"Images":imgs,"Labels":labels})
+    df = df.sample(frac=1).reset_index(drop=True) # To shuffle the data
+    test_size = 1./num_dataframes
+    if test_size==1.0:
+        return df[:int(percent_of_data*len(imgs))]
+    else:
+        v1, v2 = train_test_split(df, test_size=test_size)
+        return v1[:int(percent_of_data*len(imgs))], v2[:int(percent_of_data*len(imgs))]
 
-def reduce_size_of_dataset(
-    percent_of_data: float, x_train, y_train, x_test, y_test, x_cv, y_cv
-):
-    """
-    Return reduced versions of the x_train, y_train, x_test, y_test, x_cv and y_cv nparrays. The amount that each array will be reduced is
-        represented by the precent_of_data float. An input of 0.5 will yield 50% of the initial dataset size. Assert the dataset is reduced by
-        checking the size of x_train before and after.
-    """
-    # Shuffle indices used for training data reduction
-    train_indices = np.arange(int(percent_of_data * x_train.shape[0]))
-    np.random.shuffle(train_indices)
-
-    # Suffle indices used for test and validation data reduction
-    test_indices = np.arange(int(percent_of_data * x_test.shape[0]))
-    np.random.shuffle(test_indices)
-
-    pre_reduce_samples = x_train.shape[0]
-    # Reduce sizes of datasets then return datasets
-    x_train, y_train = x_train[train_indices], y_train[train_indices]
-    x_test, y_test, x_cv, y_cv = (
-        x_test[test_indices],
-        y_test[test_indices],
-        x_cv[test_indices],
-        y_cv[test_indices],
-    )
-    assert pre_reduce_samples >= x_train.shape[0]
-    return x_train, y_train, x_test, y_test, x_cv, y_cv
-
-
-def load_data(percent_of_data: float):
+def load_data(percent_of_data: float, batch_size):
     """
     Load all data from the expected train/ and test/ directories. Returns the number of classes/categories found in the training set, and all
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
     """
-    # Create ImageDataset objects
     PATH = f"{path_repair()}data/"
     
-    train = ImageDataset(PATH=f"{PATH}/train", TRAIN=True)
-    test = ImageDataset(PATH=f"{PATH}/test", TRAIN=False)
-
-    # Load dataset
-    x_train, y_train = train.load_data()
-    x_test, y_test = test.load_data()
+    IMG_SIZE = (128,128)
+    df = collect_images_and_labels_into_dataframe(f"{PATH}/train", 1, percent_of_data)
     
-    x_cv, x_test = np.array_split(x_test, 2)
-    y_cv, y_test = np.array_split(y_test, 2)
-
-    # Take all datasets and reduce them by the percentagle value passed into this function
-    x_train, y_train, x_test, y_test, x_cv, y_cv = reduce_size_of_dataset(
-        percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv
+    # Create ImageDataGenerator objects
+    train_datagen = ImageDataGenerator(rescale=1./255)
+    train_generator = train_datagen.flow_from_dataframe(
+        dataframe=df,
+        directory=f"{PATH}/train",
+        x_col="Images",
+        y_col="Labels",
+        target_size=IMG_SIZE,
+        batch_size=batch_size,
+        class_mode='categorical'
     )
+    
+    test, val = collect_images_and_labels_into_dataframe(f"{PATH}/test", 2, percent_of_data)
 
-    # Set train/test/cv Y data to categorical arrays, we are using categorical crossentropy loss
-    num_classes = train.get_num_categories()
-    y_train = tf.keras.utils.to_categorical(y_train, num_classes)
-    y_test = tf.keras.utils.to_categorical(y_test, num_classes)
-    y_cv = tf.keras.utils.to_categorical(y_cv, num_classes)
-
-    return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
+    validation_datagen = ImageDataGenerator(rescale=1./255)
+    validation_generator = validation_datagen.flow_from_dataframe(
+        dataframe=val,
+        directory=f"{PATH}/test",
+        x_col="Images",
+        y_col="Labels",
+        target_size=IMG_SIZE,
+        batch_size=batch_size,
+        class_mode='categorical'
+    )
+    
+    test_datagen = ImageDataGenerator(rescale=1./255)
+    test_generator = test_datagen.flow_from_dataframe(
+        dataframe=test,
+        directory=f"{PATH}/test",
+        x_col="Images",
+        y_col="Labels",
+        target_size=IMG_SIZE,
+        batch_size=20,
+        class_mode='categorical'
+    )
+    
+    return train_generator, validation_generator, test_generator
 
 
 class callback(tf.keras.callbacks.Callback):
@@ -97,7 +103,7 @@ class callback(tf.keras.callbacks.Callback):
         pass
 
 
-def create_model(num_classes):
+def create_model():
     """
     Create a Sequential Convolutional Neural Network model that accepts 128x128 rgb images (represented by input_shape (128,128,3)). Convolution and
         Pooling Layers reduce the size of the dataset eventually passed to the Dense layer at the end. Note all Dropout layers have been commented out,
@@ -105,7 +111,7 @@ def create_model(num_classes):
     """
     # set static seed here for reproducible results
     tf.random.set_seed(1234)
-
+    num_classes = 4
     # Create tensorflow model
     model = Sequential(
         [
@@ -150,16 +156,13 @@ def train_model(
     """
     model = None
     try:
-        # Load the data for the model
-        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(
-            percent_of_data
-        )
+        train_gen, validation_gen, test_gen = load_data(percent_of_data, batch_size)
 
         # Start a timer to capture time to train the model
         start = time.time()
 
         # Create the model
-        model = create_model(num_classes)
+        model = create_model()
 
         # Compile the model
         model.compile(
@@ -174,17 +177,17 @@ def train_model(
         # Fit the model
         callbacks = callback()
         history = model.fit(
-            x_train,
-            y_train,
+            train_gen,
             batch_size=batch_size,
             epochs=num_epochs,
             verbose=1,  # type: ignore
-            validation_data=(x_cv, y_cv),
+            validation_data=(validation_gen),
             callbacks=[callbacks],
         )
+        
         end = time.time()
         # Evaluate the model on the test set
-        loss, acc = model.evaluate(x_test, y_test, verbose=0)  # type: ignore
+        loss, acc = model.evaluate_generator(test_gen, verbose=0)
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
         acc_perc = f"{int(acc*100)}%"
@@ -195,7 +198,7 @@ def train_model(
 
         if acc >= 0.5:
             # Save the model only if accuracy is over 95%
-            if acc >= 0.95:
+            if acc >= 0.99:
                 model.save(
                     f"models/95-99/alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
                 )
@@ -206,6 +209,7 @@ def train_model(
         del history
     except Exception as ex:
         # Write failure and exception to log
+        print(f"logging failure...")
         f = open(f"{path_repair()}logs/failures.log", "a")
         f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         f.close()
