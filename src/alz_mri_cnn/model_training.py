@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from keras.models import Sequential
@@ -26,36 +25,45 @@ def path_repair():
     script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
     return "../../" if "src/alz" in script_dir else ""
 
-def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_of_data):
+
+def collect_images_and_labels_into_dataframe(
+    directory, num_dataframes, percent_of_data
+):
     imgs = []
     labels = []
     for sub_dir in os.listdir(f"{directory}"):
-        image_list=os.listdir(os.path.join(f"{directory}",sub_dir))  #list of all image names in the directory
-        image_list = list(map(lambda x:os.path.join(sub_dir,x),image_list))
+        image_list = os.listdir(
+            os.path.join(f"{directory}", sub_dir)
+        )  # list of all image names in the directory
+        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))
         imgs.extend(image_list)
-        labels.extend([sub_dir]*len(image_list)) 
-    
-    df = pd.DataFrame({"Images":imgs,"Labels":labels})
-    df = df.sample(frac=1).reset_index(drop=True) # To shuffle the data
-    test_size = 1./num_dataframes
-    if test_size==1.0:
-        return df[:int(percent_of_data*len(imgs))]
+        labels.extend([sub_dir] * len(image_list))
+
+    df = pd.DataFrame({"Images": imgs, "Labels": labels})
+    df = df.sample(frac=1).reset_index(drop=True)  # To shuffle the data
+    test_size = 1.0 / num_dataframes
+    if test_size == 1.0:
+        return df[: int(percent_of_data * len(imgs))]
     else:
         v1, v2 = train_test_split(df, test_size=test_size)
-        return v1[:int(percent_of_data*len(imgs))], v2[:int(percent_of_data*len(imgs))]
+        return (
+            v1[: int(percent_of_data * len(imgs))],
+            v2[: int(percent_of_data * len(imgs))],
+        )
 
-def load_data(percent_of_data:float=0.5, batch_size=20):
+
+def load_data(percent_of_data: float = 0.5, batch_size=20):
     """
     Load all data from the expected train/ and test/ directories. Returns the number of classes/categories found in the training set, and all
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
     """
     PATH = f"{path_repair()}data/"
-    
-    IMG_SIZE = (128,128)
+
+    IMG_SIZE = (128, 128)
     df = collect_images_and_labels_into_dataframe(f"{PATH}/train", 1, percent_of_data)
-    
+
     # Create ImageDataGenerator objects
-    train_datagen = ImageDataGenerator(rescale=1./255)
+    train_datagen = ImageDataGenerator(rescale=1.0 / 255)
     train_generator = train_datagen.flow_from_dataframe(
         dataframe=df,
         directory=f"{PATH}/train",
@@ -63,12 +71,14 @@ def load_data(percent_of_data:float=0.5, batch_size=20):
         y_col="Labels",
         target_size=IMG_SIZE,
         batch_size=batch_size,
-        class_mode='categorical'
+        class_mode="categorical",
     )
-    
-    test, val = collect_images_and_labels_into_dataframe(f"{PATH}/test", 2, percent_of_data)
 
-    validation_datagen = ImageDataGenerator(rescale=1./255)
+    test, val = collect_images_and_labels_into_dataframe(
+        f"{PATH}/test", 2, percent_of_data
+    )
+
+    validation_datagen = ImageDataGenerator(rescale=1.0 / 255)
     validation_generator = validation_datagen.flow_from_dataframe(
         dataframe=val,
         directory=f"{PATH}/test",
@@ -76,10 +86,10 @@ def load_data(percent_of_data:float=0.5, batch_size=20):
         y_col="Labels",
         target_size=IMG_SIZE,
         batch_size=batch_size,
-        class_mode='categorical'
+        class_mode="categorical",
     )
-    
-    test_datagen = ImageDataGenerator(rescale=1./255)
+
+    test_datagen = ImageDataGenerator(rescale=1.0 / 255)
     test_generator = test_datagen.flow_from_dataframe(
         dataframe=test,
         directory=f"{PATH}/test",
@@ -87,9 +97,9 @@ def load_data(percent_of_data:float=0.5, batch_size=20):
         y_col="Labels",
         target_size=IMG_SIZE,
         batch_size=20,
-        class_mode='categorical'
+        class_mode="categorical",
     )
-    
+
     return train_generator, validation_generator, test_generator
 
 
@@ -184,7 +194,7 @@ def train_model(
             validation_data=(validation_gen),
             callbacks=[callbacks],
         )
-        
+
         end = time.time()
         # Evaluate the model on the test set
         loss, acc = model.evaluate(test_gen, verbose=0)
@@ -209,11 +219,11 @@ def train_model(
         del history
     except Exception as ex:
         # Write failure and exception to log
-        print(f"logging failure...")
+        print("logging failure...")
         f = open(f"{path_repair()}logs/failures.log", "a")
         f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         f.close()
-        time.sleep(5)
+        time.sleep(2.)
     finally:
         # Garbage collection, delete model, clear keras backend and gc.collect()
         if model:
