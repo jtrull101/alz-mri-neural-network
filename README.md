@@ -25,12 +25,12 @@
   <h3 align="center">Alzheimers MRI Scan Neural Network</h3>
 
   <p align="center">
-    Simple Convolutional Neural Network intended to diagnose fictitious MRI images, labeling new inputs as one of the following classes: No Impairment, Very Mild Impairment, Very Mild Impairment, and Moderate Impairment
+    Simple Convolutional Neural Network intended to diagnose fictitious MRI images, labeling new inputs as one of the following classes: 
+    <br>No Impairment, Very Mild Impairment, 
+    <br>Mild Impairment, Moderate Impairment
     <br>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
-    ·
-    <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
+    · <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
+    · <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
   </p>
 </div>
 
