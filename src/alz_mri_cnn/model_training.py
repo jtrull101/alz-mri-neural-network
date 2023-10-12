@@ -33,7 +33,7 @@ def collect_images_and_labels_into_dataframe(
         # list of all image names in the directory
         image_list = os.listdir(os.path.join(directory, sub_dir))
         # get full paths for each imag ein list
-        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list)) # type: ignore
+        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))  # type: ignore
         # add all images found to mass image list
         imgs.extend(image_list)
         # extend labels directory. Use label of sub directory, printed out # of images times
