@@ -29,4 +29,7 @@ jobs:
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
     - name: Test with tox
+      env: 
+        KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
       run: tox
