@@ -1,5 +1,4 @@
-export KAGGLE_USERNAME=jonathantrull
-export KAGGLE_KEY=poopybutthole
-
+#
+mkdir ~/.kaggle
 touch ~/.kaggle/kaggle.json
-echo '{"username":'\"$KAGGLE_USERNAME\"',"key":'\"$KAGGLE_KEY\"'}' > ~/.kaggle/tmp.kaggle.json
+echo '{"username":'\"$KAGGLE_USERNAME\"',"key":'\"$KAGGLE_KEY\"'}' > ~/.kaggle/kaggle.json
