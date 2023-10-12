@@ -231,6 +231,7 @@ def train_model(
 
 def download_data_from_kaggle():
     # Download dataset from kaggle
+    kaggle.api.read_config_environment()
     kaggle.api.authenticate()
     try:
         kaggle.api.dataset_download_files('tourist55/alzheimers-dataset-4-class-of-images', path=RUNNING_DIR, unzip=True)
