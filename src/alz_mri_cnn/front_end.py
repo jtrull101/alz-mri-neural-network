@@ -96,6 +96,8 @@ def get_random_of_class(chosen_class):
     """
     if chosen_class in NICER_CLASS_NAMES:
         index = NICER_CLASS_NAMES.index(chosen_class)
+    elif chosen_class in CLASSES:
+        index = CLASSES.index(chosen_class)
     
     dir = os.path.join(RUNNING_DIR, 'data', 'test')
     for path in os.listdir(dir): 
