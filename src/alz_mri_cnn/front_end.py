@@ -7,6 +7,10 @@ import numpy as np
 import random
 import shutil
 
+IMG_SIZE = (128, 128)
+# IMG_SIZE = (128//2, 128//2)
+
+RUNNING_DIR = "/tmp/alz_mri_cnn/"
 
 NICER_CLASS_NAMES = [
     "Mild Impairment",
@@ -24,21 +28,32 @@ CLASSES = [
 
 app = Flask(__name__)
 
-model = None
 model_accuracy = None
 best_performing_model = (
     "alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras"
 )
 model_accuracy = "98%"
-model_name = os.path.join('models', '95-99', best_performing_model)
 
-
-def get_model(model_dir=None):
+model = None
+ 
+def get_model() -> keras.Model:
     global model
-    global model_name
     if not model:
-        if model_dir:
-            model_name = os.path.join(model_dir, model_name)
+        if os.path.exists(best_performing_model):
+            model_name = os.path.join(RUNNING_DIR, 'models', best_performing_model)
+        else:
+            # grab a model
+            models = []
+            best = None
+            for model in os.listdir(os.path.join(RUNNING_DIR, 'models')):
+                if '.keras' in model:
+                    models.append(model)
+                    acc = int(model[model.find("%")-2:model.find("%")].replace("_",""))
+                    if best is None or acc > best[0]: 
+                        best = (acc,model)
+            
+            model_name = os.path.join(RUNNING_DIR, 'models', best[1])
+
         model = keras.models.load_model(model_name)
     return model
 
@@ -79,13 +94,18 @@ def get_random_of_class(chosen_class):
     """
     With the specified chosen_class, find a random image and get a prediction of that image from the model.
     """
+    if chosen_class in NICER_CLASS_NAMES:
+        index = NICER_CLASS_NAMES.index(chosen_class)
+    elif chosen_class in CLASSES:
+        index = CLASSES.index(chosen_class)
+    
     dir = "/tmp/alz_mri_cnn/data/test/"
-    for path in os.listdir(dir):
-        if path == chosen_class:
+    for path in os.listdir(dir): 
+        if path == CLASSES[index]:
             images = os.listdir(os.path.join(dir,path))
     assert images
     image = random.choice(images)
-    return predict_image( os.path.join(dir, chosen_class, image))
+    return predict_image(os.path.join(dir, CLASSES[index], image))
 
 
 def predict_image(path):
@@ -94,10 +114,10 @@ def predict_image(path):
         class the model predicted, found probability for that predicted class).
     """
     image = cv2.imread(path)
-    image_resize = cv2.resize(image, (128, 128))
+    image_resize = cv2.resize(image, IMG_SIZE)
     data = np.asanyarray(image_resize, dtype=float)
     x_data = np.asarray(data) / (255.0)  # type: np.typing.NDArray[np.float64]
-    x_data_reshape = np.reshape(x_data, (1, 128, 128, 3))
+    x_data_reshape = np.reshape(x_data, (1, IMG_SIZE[0], IMG_SIZE[1], 3))
     probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
     return (path, NICER_CLASS_NAMES[max], int(probabilities[0][max]*100))
