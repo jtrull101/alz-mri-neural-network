@@ -39,8 +39,10 @@ model = None
 def get_model() -> keras.Model:
     global model
     if not model:
-        if os.path.exists(best_performing_model):
-            model_name = os.path.join(RUNNING_DIR, 'models', best_performing_model)
+        best_path_1 = os.path.join(RUNNING_DIR, 'models', best_performing_model)
+        best_path_2 = os.path.join('static', best_performing_model)
+        if os.path.exists(best_path_1):   model_name = best_path_1
+        elif os.path.exists(best_path_2): model_name = best_path_2
         else:
             # grab a model
             models = []
