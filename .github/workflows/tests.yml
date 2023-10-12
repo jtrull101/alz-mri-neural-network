@@ -32,4 +32,7 @@ jobs:
       env: 
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
         KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
-      run: tox
+      run: 
+        echo $KAGGLE_USERNAME
+        echo $KAGGLE_KEY
+        tox
