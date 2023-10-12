@@ -234,9 +234,9 @@ def download_data_from_kaggle():
     kaggle.api.authenticate()
     try:
         kaggle.api.dataset_download_files('tourist55/alzheimers-dataset-4-class-of-images', path=RUNNING_DIR, unzip=True)
-    except:
+    except Exception as e:
         print("Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials")
-        exit(1)    
+        raise e
     
     # Separate zip into separate directories in data/
     dataset_dir = os.path.join(RUNNING_DIR, 'Alzheimer_s Dataset') 
