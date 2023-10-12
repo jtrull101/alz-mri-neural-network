@@ -35,4 +35,7 @@ jobs:
       run: sudo ./create_kaggle_json.sh ${{ secrets.KAGGLE_USERNAME }}, ${{ secrets.KAGGLE_KEY }} 
 
     - name: Test with tox
-      run: tox
+      run: |
+        export KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}
+        export KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}
+        tox
