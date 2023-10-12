@@ -1,3 +1,4 @@
+import pathlib
 import tensorflow as tf
 from keras import backend as K
 from keras.models import Sequential
@@ -205,8 +206,8 @@ def train_model(
         out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
 
         if acc >= 0.5:
-            # Save the model only if accuracy is over 95%
-            if acc >= 0.99:
+            # Save the model only if accuracy is over 98%
+            if acc >= 0.98:
                 name = f"alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
                 model.save(f = open(os.path.join(RUNNING_DIR, 'models', '95-99', name), "a"))
             f = open(os.path.join(RUNNING_DIR, 'logs', 'histories.log'), "a")
@@ -241,9 +242,11 @@ def download_data_from_kaggle():
     # Separate zip into separate directories in data/
     dataset_dir = os.path.join(RUNNING_DIR, 'Alzheimer_s Dataset') 
     for dir in os.listdir(dataset_dir): 
+        if pathlib.Path(os.path.join(RUNNING_DIR, 'data', dir)).exists():
+            shutil.rmtree(os.path.join(RUNNING_DIR, 'data', dir))
+        
         shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, 'data'))
     os.rmdir(dataset_dir)
-    print()
     
 
 def main():
