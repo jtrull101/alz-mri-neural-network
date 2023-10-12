@@ -2,7 +2,7 @@ import unittest
 import os
 from src.alz_mri_cnn.model_training import train_model, load_data, init
 from src.alz_mri_cnn.front_end import get_random_of_class, CLASSES
-import pytest
+import pytest 
 
 SCRIPT_DIR = os.path.dirname(__file__)
 
