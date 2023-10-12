@@ -59,8 +59,7 @@ def get_model() -> keras.Model:
                     if best is None or acc > best[0]:   # type: ignore
                         best = (acc, model)             # type: ignore
 
-            model_name = os.path.join(RUNNING_DIR, "models", best[1])
-
+            model_name = os.path.join(RUNNING_DIR, "models", best[1])  # type: ignore
         model = keras.models.load_model(model_name)
     return model
 
