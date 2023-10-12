@@ -5,7 +5,7 @@
     "editor.defaultFoldingRangeProvider": "ms-python.black-formatter",
     "editor.defaultFormatter": "ms-python.black-formatter",
     "python.analysis.autoFormatStrings": true,
-    "python.formatting.provider": "none",
+    "python.formatting.provider": "black",
     "[toml]": {
         "editor.defaultFormatter": "tamasfe.even-better-toml"
     },

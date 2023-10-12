@@ -2,7 +2,7 @@ import pathlib
 import tensorflow as tf
 from keras import backend as K
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D  # , Dropout
 import os
 import logging
 import gc
@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 import kaggle
 import shutil
-from keras.callbacks import LearningRateScheduler
+# from keras.callbacks import LearningRateScheduler
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
@@ -24,14 +24,16 @@ IMG_SIZE = (128, 128)
 RUNNING_DIR = "/tmp/alz_mri_cnn/"
 
 
-def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_of_data):
+def collect_images_and_labels_into_dataframe(
+    directory, num_dataframes, percent_of_data
+):
     imgs = []
     labels = []
     for sub_dir in os.listdir(directory):
         # list of all image names in the directory
-        image_list = os.listdir(os.path.join(directory, sub_dir)) 
+        image_list = os.listdir(os.path.join(directory, sub_dir))
         # get full paths for each imag ein list
-        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))
+        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list)) # type: ignore
         # add all images found to mass image list
         imgs.extend(image_list)
         # extend labels directory. Use label of sub directory, printed out # of images times
@@ -52,13 +54,13 @@ def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_
         )
 
 
-def load_data(percent_of_data:float=0.5, batch_size=20):
+def load_data(percent_of_data: float = 0.5, batch_size=20):
     """
     Load all data from the expected train/ and test/ directories. Returns the number of classes/categories found in the training set, and all
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
     """
-    PATH = os.path.join(RUNNING_DIR, 'data')
-    train_path = os.path.join(PATH, 'train')
+    PATH = os.path.join(RUNNING_DIR, "data")
+    train_path = os.path.join(PATH, "train")
     df = collect_images_and_labels_into_dataframe(train_path, 1, percent_of_data)
 
     # Create ImageDataGenerator objects
@@ -73,7 +75,7 @@ def load_data(percent_of_data:float=0.5, batch_size=20):
         class_mode="categorical",
     )
 
-    test_path = os.path.join(PATH, 'test')
+    test_path = os.path.join(PATH, "test")
     test, val = collect_images_and_labels_into_dataframe(test_path, 2, percent_of_data)
 
     validation_datagen = ImageDataGenerator(rescale=1.0 / 255)
@@ -121,15 +123,17 @@ def create_model():
     tf.random.set_seed(1234)
 
     num_classes = 4
-    l = list(IMG_SIZE)
-    l.append(3) # rgb channels
-    input_shape = tuple(l)
+    _list = list(IMG_SIZE)
+    _list.append(3)  # rgb channels
+    input_shape = tuple(_list)
 
     # Create tensorflow model
     model = Sequential(
         [
             # Convolution and Pooling 4 times before flattening to reduce total number of pixels passed to last Dense layer
-            Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),  # relu - ReLU(x)=max(0,x)
+            Conv2D(
+                32, (3, 3), activation="relu", input_shape=input_shape
+            ),  # relu - ReLU(x)=max(0,x)
             MaxPooling2D(2, 2),
             Conv2D(32, (3, 3), activation="relu"),
             MaxPooling2D(2, 2),
@@ -148,7 +152,11 @@ def create_model():
 
 
 def train_model(
-    percent_of_data=0.99, num_epochs=25, batch_size=32, learning_rate=0.001, force_save=False,
+    percent_of_data=0.99,
+    num_epochs=25,
+    batch_size=32,
+    learning_rate=0.001,
+    force_save=False,
 ):
     """
     Given the specified percent_of_data, num_epochs, batch_size and learning_rate, first create a model, then compile, build, and finally
@@ -181,7 +189,7 @@ def train_model(
 
         callbacks = callback()
         # lr_scheduler = LearningRateScheduler(lambda epoch: 1e-8*10**(epoch/20))
-        
+
         # Fit the model
         history = model.fit(
             train_gen,
@@ -189,7 +197,7 @@ def train_model(
             epochs=num_epochs,
             verbose=1,  # type: ignore
             validation_data=(validation_gen),
-            callbacks=[callbacks], #lr_scheduler],
+            callbacks=[callbacks],  # lr_scheduler],
         )
 
         end = time.time()
@@ -207,8 +215,8 @@ def train_model(
             # Save the model only if accuracy is over 98%
             if force_save or acc >= 0.98:
                 name = f"alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
-                model.save(os.path.join(RUNNING_DIR, 'models', name), "a")
-            f = open(os.path.join(RUNNING_DIR, 'logs', 'histories.log'), "a")
+                model.save(os.path.join(RUNNING_DIR, "models", name), "a")
+            f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
             f.write(out)
             f.close()
         # Delete the history object for garbage collection
@@ -216,7 +224,7 @@ def train_model(
     except Exception as ex:
         # Write failure and exception to log
         print("logging failure...")
-        f = open(os.path.join(RUNNING_DIR, 'logs', 'failures.log'), "a")
+        f = open(os.path.join(RUNNING_DIR, "logs", "failures.log"), "a")
         f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         f.close()
         time.sleep(2.0)
@@ -229,55 +237,63 @@ def train_model(
         gc.collect()
     return True
 
+
 def download_data_from_kaggle():
     # Download dataset from kaggle
     kaggle.api.authenticate()
     try:
-        kaggle.api.dataset_download_files('tourist55/alzheimers-dataset-4-class-of-images', path=RUNNING_DIR, unzip=True)
+        kaggle.api.dataset_download_files(
+            "tourist55/alzheimers-dataset-4-class-of-images",
+            path=RUNNING_DIR,
+            unzip=True,
+        )
     except Exception as e:
-        print("Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials")
+        print(
+            "Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials"
+        )
         raise e
-    
+
     # Separate zip into separate directories in data/
-    dataset_dir = os.path.join(RUNNING_DIR, 'Alzheimer_s Dataset') 
-    for dir in os.listdir(dataset_dir): 
-        if pathlib.Path(os.path.join(RUNNING_DIR, 'data', dir)).exists():
-            shutil.rmtree(os.path.join(RUNNING_DIR, 'data', dir))
-        
-        shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, 'data'))
+    dataset_dir = os.path.join(RUNNING_DIR, "Alzheimer_s Dataset")
+    for dir in os.listdir(dataset_dir):
+        if pathlib.Path(os.path.join(RUNNING_DIR, "data", dir)).exists():
+            shutil.rmtree(os.path.join(RUNNING_DIR, "data", dir))
+
+        shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, "data"))
     os.rmdir(dataset_dir)
-    
+
+
 def init():
     required_paths = [
         RUNNING_DIR,
-        os.path.join(RUNNING_DIR, 'logs'),
-        os.path.join(RUNNING_DIR, 'data')
+        os.path.join(RUNNING_DIR, "logs"),
+        os.path.join(RUNNING_DIR, "data"),
     ]
     for p in required_paths:
-        if not os.path.exists(p): os.makedirs(p)
+        if not os.path.exists(p):
+            os.makedirs(p)
         print(f"The new directory {p} is created!")
     os.chdir(RUNNING_DIR)
-    
+
     # Download data using the Kaggle API
     download_data_from_kaggle()
     return True
-    
+
 
 def main():
     """
     Main function - perform model training over many iterations
     """
     init()
-    
+
     # Create starting log, indicating structure of logs
-    f = open(os.path.join(RUNNING_DIR, 'logs', 'histories.log'), "a")
+    f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
     f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
     f.write(
         "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
     )
     f.close()
 
-    
     data_subets = [0.99]  # may need to downsample images before using more data
     epochs = [10, 25, 50, 75, 100]  # 'random' scaling numbers
     batch_sizes = [32]  # powers of 2
