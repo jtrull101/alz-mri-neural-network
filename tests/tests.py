@@ -1,15 +1,11 @@
 import unittest
-import os
 from src.alz_mri_cnn.model_training import train_model, load_data, init
 from src.alz_mri_cnn.front_end import get_random_of_class, CLASSES
 import pytest 
 
-SCRIPT_DIR = os.path.dirname(__file__)
-
-
 class TestMethods(unittest.TestCase):
-    MODEL_NAME = None
     
+    """ TODO """
     @pytest.mark.run(order=1)
     def test_init(self):
         assert init()
