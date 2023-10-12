@@ -32,7 +32,7 @@ jobs:
       env: 
         KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
         KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}  
-      run: ./create_kaggle_json.sh env.KAGGLE_USERNAME, env.KAGGLE_PASSWORD
+      run: sudo ./create_kaggle_json.sh env.KAGGLE_USERNAME, env.KAGGLE_PASSWORD
     - name: Make script executable
       run: chmod +x create_kaggle_json.sh
     - name: Test with tox
