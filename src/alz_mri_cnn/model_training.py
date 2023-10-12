@@ -1,47 +1,43 @@
 import tensorflow as tf
 from keras import backend as K
 from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 import os
 import logging
 import gc
 import time
 from datetime import datetime
-import sys
 from keras.preprocessing.image import ImageDataGenerator
 import pandas as pd
 from sklearn.model_selection import train_test_split
-
+import kaggle
+import shutil
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
 
-"""
-Dataset source:
-    https://www.kaggle.com/datasets/lukechugh/best-alzheimer-mri-dataset-99-accuracy
-"""
+
+IMG_SIZE = (128, 128)
+RUNNING_DIR = "/tmp/alz_mri_cnn/"
 
 
-def path_repair():
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    return "../../" if "src/alz" in script_dir else ""
-
-
-def collect_images_and_labels_into_dataframe(
-    directory, num_dataframes, percent_of_data
-):
+def collect_images_and_labels_into_dataframe(directory, num_dataframes, percent_of_data):
     imgs = []
     labels = []
-    for sub_dir in os.listdir(f"{directory}"):
-        image_list = os.listdir(
-            os.path.join(f"{directory}", sub_dir)
-        )  # list of all image names in the directory
+    for sub_dir in os.listdir(directory):
+        # list of all image names in the directory
+        image_list = os.listdir(os.path.join(directory, sub_dir)) 
+        # get full paths for each imag ein list
         image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))
+        # add all images found to mass image list
         imgs.extend(image_list)
+        # extend labels directory. Use label of sub directory, printed out # of images times
         labels.extend([sub_dir] * len(image_list))
 
+    # Create pandas dataframe
     df = pd.DataFrame({"Images": imgs, "Labels": labels})
     df = df.sample(frac=1).reset_index(drop=True)  # To shuffle the data
     test_size = 1.0 / num_dataframes
+    # return portions of dataframe based on the 'num_dataframes' passed in. helpful to separate test/validation data
     if test_size == 1.0:
         return df[: int(percent_of_data * len(imgs))]
     else:
@@ -52,21 +48,20 @@ def collect_images_and_labels_into_dataframe(
         )
 
 
-def load_data(percent_of_data: float = 0.5, batch_size=20):
+def load_data(percent_of_data:float=0.5, batch_size=20):
     """
     Load all data from the expected train/ and test/ directories. Returns the number of classes/categories found in the training set, and all
         x_train, y_train, x_test, y_test, x_cv and y_cv np arrays.
     """
-    PATH = f"{path_repair()}data/"
-
-    IMG_SIZE = (128, 128)
-    df = collect_images_and_labels_into_dataframe(f"{PATH}/train", 1, percent_of_data)
+    PATH = os.path.join(RUNNING_DIR, 'data')
+    train_path = os.path.join(PATH, 'train')
+    df = collect_images_and_labels_into_dataframe(train_path, 1, percent_of_data)
 
     # Create ImageDataGenerator objects
     train_datagen = ImageDataGenerator(rescale=1.0 / 255)
     train_generator = train_datagen.flow_from_dataframe(
         dataframe=df,
-        directory=f"{PATH}/train",
+        directory=train_path,
         x_col="Images",
         y_col="Labels",
         target_size=IMG_SIZE,
@@ -74,14 +69,13 @@ def load_data(percent_of_data: float = 0.5, batch_size=20):
         class_mode="categorical",
     )
 
-    test, val = collect_images_and_labels_into_dataframe(
-        f"{PATH}/test", 2, percent_of_data
-    )
+    test_path = os.path.join(PATH, 'test')
+    test, val = collect_images_and_labels_into_dataframe(test_path, 2, percent_of_data)
 
     validation_datagen = ImageDataGenerator(rescale=1.0 / 255)
     validation_generator = validation_datagen.flow_from_dataframe(
         dataframe=val,
-        directory=f"{PATH}/test",
+        directory=test_path,
         x_col="Images",
         y_col="Labels",
         target_size=IMG_SIZE,
@@ -92,7 +86,7 @@ def load_data(percent_of_data: float = 0.5, batch_size=20):
     test_datagen = ImageDataGenerator(rescale=1.0 / 255)
     test_generator = test_datagen.flow_from_dataframe(
         dataframe=test,
-        directory=f"{PATH}/test",
+        directory=test_path,
         x_col="Images",
         y_col="Labels",
         target_size=IMG_SIZE,
@@ -121,26 +115,30 @@ def create_model():
     """
     # set static seed here for reproducible results
     tf.random.set_seed(1234)
+
     num_classes = 4
+    l = list(IMG_SIZE)
+    l.append(3)
+    input_shape = tuple(l)
+
     # Create tensorflow model
     model = Sequential(
         [
             # Convolution and Pooling 3 times before flattening to reduce total number of pixels passed to last Dense layer
             Conv2D(
-                32, (3, 3), activation="relu", input_shape=(128, 128, 3)
+                32, (3, 3), activation="relu", input_shape=input_shape
             ),  # relu - ReLU(x)=max(0,x)
             MaxPooling2D(2, 2),
-            # Dropout(0.15),    # select a percentage of outputs at random and set to 0, helps regularize
+            Dropout(0.15),  
             Conv2D(32, (3, 3), activation="relu"),
             MaxPooling2D(2, 2),
-            # Dropout(0.25),
+            Dropout(0.25),
             Conv2D(64, (3, 3), activation="relu"),
             MaxPooling2D(2, 2),
             Conv2D(64, (3, 3), activation="relu"),
             MaxPooling2D(2, 2),
             Flatten(),  # take 4D array, turn into vector
             Dense(128, activation="relu"),
-            # Dropout(0.5),
             Dense(num_classes, activation="softmax"),
         ]
     )
@@ -209,10 +207,9 @@ def train_model(
         if acc >= 0.5:
             # Save the model only if accuracy is over 95%
             if acc >= 0.99:
-                model.save(
-                    f"models/95-99/alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
-                )
-            f = open(f"{path_repair()}logs/histories.log", "a")
+                name = f"alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
+                model.save(f = open(os.path.join(RUNNING_DIR, 'models', '95-99', name), "a"))
+            f = open(os.path.join(RUNNING_DIR, 'logs', 'histories.log'), "a")
             f.write(out)
             f.close()
         # Delete the history object for garbage collection
@@ -220,10 +217,10 @@ def train_model(
     except Exception as ex:
         # Write failure and exception to log
         print("logging failure...")
-        f = open(f"{path_repair()}logs/failures.log", "a")
+        f = open(os.path.join(RUNNING_DIR, 'logs', 'failures.log'), "a")
         f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         f.close()
-        time.sleep(2.)
+        time.sleep(2.0)
     finally:
         # Garbage collection, delete model, clear keras backend and gc.collect()
         if model:
@@ -232,22 +229,49 @@ def train_model(
         gc.collect()
     return True
 
+def download_data_from_kaggle():
+    # Download dataset from kaggle
+    kaggle.api.authenticate()
+    try:
+        kaggle.api.dataset_download_files('tourist55/alzheimers-dataset-4-class-of-images', path=RUNNING_DIR, unzip=True)
+    except:
+        print("Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials")
+        exit(1)    
+    
+    # Separate zip into separate directories in data/
+    dataset_dir = os.path.join(RUNNING_DIR, 'Alzheimer_s Dataset') 
+    for dir in os.listdir(dataset_dir): 
+        shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, 'data'))
+    os.rmdir(dataset_dir)
+    print()
+    
 
 def main():
     """
     Main function - perform model training over many iterations
     """
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    os.chdir(script_dir)
+    required_paths = [
+        RUNNING_DIR,
+        os.path.join(RUNNING_DIR, 'logs'),
+        os.path.join(RUNNING_DIR, 'data')
+    ]
+    for p in required_paths:
+        if not os.path.exists(p): os.makedirs(p)
+        print(f"The new directory {p} is created!")
+    os.chdir(RUNNING_DIR)
 
     # Create starting log, indicating structure of logs
-    f = open(f"{path_repair()}logs/histories.log", "a")
+    
+    f = open(os.path.join(RUNNING_DIR, 'logs', 'histories.log'), "a")
     f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
     f.write(
         "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
     )
     f.close()
 
+    # Download data using the Kaggle API
+    download_data_from_kaggle()
+    
     data_subets = [0.99]  # may need to downsample images before using more data
     epochs = [10, 25, 50, 75, 100]  # 'random' scaling numbers
     batch_sizes = [32]  # powers of 2

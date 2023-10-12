@@ -8,13 +8,20 @@ import random
 import shutil
 
 
-CLASSES = [
+NICER_CLASS_NAMES = [
     "Mild Impairment",
     "No Impairment",
     "Moderate Impairment",
     "Very Mild Impairment",
 ]
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CLASSES = [
+    "MildDemented",
+    "NonDemented",
+    "ModerateDemented",
+    "VeryMildDemented",
+]
+
+
 app = Flask(__name__)
 
 model = None
@@ -23,7 +30,7 @@ best_performing_model = (
     "alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras"
 )
 model_accuracy = "98%"
-model_name = f"models/95-99/{best_performing_model}"
+model_name = os.path.join('models', '95-99', best_performing_model)
 
 
 def get_model(model_dir=None):
@@ -31,7 +38,7 @@ def get_model(model_dir=None):
     global model_name
     if not model:
         if model_dir:
-            model_name = model_dir + model_name
+            model_name = os.path.join(model_dir, model_name)
         model = keras.models.load_model(model_name)
     return model
 
@@ -43,22 +50,22 @@ def on_start():
         of that class and the prediction the model gave.
     """
     if request.method == "POST":
-        image, prediction, confidence = get_random_of_class(request.form.get("impairment_val"), f"{SCRIPT_DIR}/../../")
+        image, prediction, confidence = get_random_of_class(request.form.get("impairment_val"))
     elif request.method == "GET":
         return render_template("index.html")
 
     # Clear out the static dir of all previous entries (jpgs)
-    for p in os.listdir(f"{SCRIPT_DIR}/static"):
+    for p in os.listdir("static"):
         if ".jpg" in p:
             try:
-                os.remove(f"{SCRIPT_DIR}/static/{p}")
+                os.remove(f"static/{p}")
             except Exception as e:
                 print(f"encountered issue when removing image {p} from static dir: {e}")
-    shutil.copy(image, f"{SCRIPT_DIR}/static")
+    shutil.copy(image, "static")
 
     # Render the image now that it is in the static dir
     index = image.rindex("/")
-    img_location = f"static/{image[index+1 : len(image)]}"
+    img_location = os.path.join('static', image[index+1 : len(image)])
     return render_template(
         "index.html",
         model_accuracy=model_accuracy,
@@ -68,20 +75,17 @@ def on_start():
     )
 
 
-def get_random_of_class(chosen_class, dir_override=None):
+def get_random_of_class(chosen_class):
     """
     With the specified chosen_class, find a random image and get a prediction of that image from the model.
     """
-    dir = "data/test"
-    if dir_override:
-        dir = dir_override + dir
-
+    dir = "/tmp/alz_mri_cnn/data/test/"
     for path in os.listdir(dir):
         if path == chosen_class:
-            images = os.listdir(f"{dir}/{path}")
+            images = os.listdir(os.path.join(dir,path))
     assert images
     image = random.choice(images)
-    return predict_image(f"{dir}/{chosen_class}/{image}")
+    return predict_image( os.path.join(dir, chosen_class, image))
 
 
 def predict_image(path):
@@ -96,7 +100,7 @@ def predict_image(path):
     x_data_reshape = np.reshape(x_data, (1, 128, 128, 3))
     probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
-    return (path, CLASSES[max], int(probabilities[0][max]*100))
+    return (path, NICER_CLASS_NAMES[max], int(probabilities[0][max]*100))
 
 
 @app.route("/predict", methods=["POST"])
@@ -113,16 +117,13 @@ def predict():
         # read and save file to output directory
         file = f[1]
         filename = secure_filename(file.filename)  # type: ignore
-        filepath = f"{SCRIPT_DIR}/output/{filename}"
+        filepath = os.path.join('output', filename)
         file.save(filepath)
         # predict image, remove file
         vals.append(predict_image(filepath))
         os.remove(filepath)
     return vals
 
-
 if __name__ == "__main__":
-    os.chdir(SCRIPT_DIR)
-    # When running from main - not pytest, need to get the model from /../../
-    model = get_model(model_dir=f"{SCRIPT_DIR}/../../")
+    model = get_model()
     app.run(debug=True)
