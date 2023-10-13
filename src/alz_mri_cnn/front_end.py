@@ -1,11 +1,13 @@
-from flask import Flask, request, render_template
-from werkzeug.utils import secure_filename
 import os
-import keras
-import cv2
-import numpy as np
 import random
 import shutil
+
+import cv2
+import keras
+import numpy as np
+from flask import Flask, render_template, request
+from werkzeug.utils import secure_filename
+import typing
 
 IMG_SIZE = (128, 128)
 # IMG_SIZE = (128//2, 128//2)
@@ -28,38 +30,39 @@ CLASSES = [
 
 app = Flask(__name__)
 
-model_accuracy = None
-best_performing_model = (
-    "alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras"
-)
-model_accuracy = "98%"
 
 model = None
+model_accuracy = None
 
 
 def get_model() -> keras.Model:
     global model
+    global model_accuracy
     if not model:
-        best_path_1 = os.path.join(RUNNING_DIR, "models", best_performing_model)
-        best_path_2 = os.path.join("static", best_performing_model)
-        if os.path.exists(best_path_1):
-            model_name = best_path_1
-        elif os.path.exists(best_path_2):
-            model_name = best_path_2
-        else:
-            # grab a model
-            models = []
-            best = None
-            for model in os.listdir(os.path.join(RUNNING_DIR, "models")):
-                if ".keras" in model:
-                    models.append(model)
-                    acc = int(
-                        model[model.find("%") - 2: model.find("%")].replace("_", "")
-                    )
-                    if best is None or acc > best[0]:   # type: ignore
-                        best = (acc, model)             # type: ignore
+        found_models = []  # type: typing.List[keras.Model]
 
-            model_name = os.path.join(RUNNING_DIR, "models", best[1])  # type: ignore
+        def find_model_in_dir(dir):
+            for k in os.listdir(best_path_1):
+                if '.keras' in k:
+                    found_models.append(os.path.join(best_path_1, k))
+
+        best_path_1 = os.path.join(RUNNING_DIR, "models")
+        find_model_in_dir(best_path_1)
+
+        best_path_2 = os.path.join("static")
+        find_model_in_dir(best_path_2)
+
+        best = None
+        for model in found_models:
+            acc = int(
+                model[model.find("%") - 2: model.find("%")].replace("_", "")
+            )
+            if best is None or acc > best[0]:   # type: ignore
+                best = (acc, model)
+
+        model_accuracy, model_name = best   # type: ignore
+
+        print(f"loading model with accuracy={model_accuracy}")
         model = keras.models.load_model(model_name)
     return model
 
@@ -109,11 +112,14 @@ def get_random_of_class(chosen_class):
 
     dir = os.path.join(RUNNING_DIR, "data", "test")
     for path in os.listdir(dir):
-        if path == CLASSES[index]:
+        if path == CLASSES[index] or path == NICER_CLASS_NAMES[index]:
             images = os.listdir(os.path.join(dir, path))
     assert images
     image = random.choice(images)
-    return predict_image(os.path.join(dir, CLASSES[index], image))
+    try:
+        return predict_image(os.path.join(dir, CLASSES[index], image))
+    except BaseException:
+        return predict_image(os.path.join(dir, NICER_CLASS_NAMES[index], image))
 
 
 def predict_image(path):
@@ -121,6 +127,7 @@ def predict_image(path):
     Given an image at the specified path, feed it to the best-performing model and return the (path of the image,
         class the model predicted, found probability for that predicted class).
     """
+    print(f"predict image at path:{path}")
     image = cv2.imread(path)
     image_resize = cv2.resize(image, IMG_SIZE)
     data = np.asanyarray(image_resize, dtype=float)

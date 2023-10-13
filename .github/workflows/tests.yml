@@ -17,9 +17,7 @@ jobs:
     strategy:
       matrix:
         os: [Ubuntu-latest, windows-latest ]
-        python-version: [ '3.7', '3.8', '3.9', '3.10'] 
-        # os: [Ubuntu-latest]
-        # python-version: [ '3.7'] 
+        python-version: [ '3.7', '3.8', '3.9', '3.10']
       fail-fast: true
       max-parallel: 1
     steps:
@@ -35,13 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
-
-    - name: Copy pre-fetched data to running dir /tmp/alz_mri_cnn/ and echo
-      run: |
-        mkdir /tmp/alz_mri_cnn/
-        cp -r pre_fetched_data/* /tmp/alz_mri_cnn/
-        mkdir /tmp/alz_mri_cnn/models/
-        cp -r src/alz_mri_cnn/static/alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras /tmp/alz_mri_cnn/models/
+        ./init.sh
 
     - name: Test with tox
       run: tox
