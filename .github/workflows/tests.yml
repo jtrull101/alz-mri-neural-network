@@ -40,8 +40,8 @@ jobs:
       run: |
         mkdir /tmp/alz_mri_cnn/
         cp -r pre_fetched_data/* /tmp/alz_mri_cnn/
-        mkdir /tmp/models/
-        cp -r src/alz_mri_cnn/static/alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras /tmp/models/
+        mkdir /tmp/alz_mri_cnn/models/
+        cp -r src/alz_mri_cnn/static/alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras /tmp/alz_mri_cnn/models/
 
     - name: Test with tox
       run: tox

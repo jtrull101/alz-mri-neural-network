@@ -252,17 +252,21 @@ def download_data_from_kaggle():
     #         "Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials"
     #     )
     #     raise e
-    
-    
 
     # Separate zip into separate directories in data/
     dataset_dir = os.path.join(RUNNING_DIR, "Alzheimer_s Dataset")
-    for dir in os.listdir(dataset_dir):
-        if pathlib.Path(os.path.join(RUNNING_DIR, "data", dir)).exists():
-            shutil.rmtree(os.path.join(RUNNING_DIR, "data", dir))
+    if pathlib.Path(dataset_dir).exists():
+        for dir in os.listdir(dataset_dir):
+            if pathlib.Path(os.path.join(RUNNING_DIR, "data", dir)).exists():
+                shutil.rmtree(os.path.join(RUNNING_DIR, "data", dir))
 
-        shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, "data"))
-    os.rmdir(dataset_dir)
+            shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, "data"))
+        os.rmdir(dataset_dir)
+
+    train_dir = os.path.join(RUNNING_DIR, "data", "train")
+    assert len(os.listdir(train_dir)) > 0
+    test_dir = os.path.join(RUNNING_DIR, "data", "test")
+    assert len(os.listdir(test_dir)) > 0
 
 
 def init():
