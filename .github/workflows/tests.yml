@@ -33,7 +33,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
-        chmod +x unit.sh 
+        chmod +x init.sh 
         chmod +x start_front_end.sh
         ./init.sh
 
