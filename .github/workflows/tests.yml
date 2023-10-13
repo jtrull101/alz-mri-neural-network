@@ -38,8 +38,10 @@ jobs:
 
     - name: Copy pre-fetched data to running dir /tmp/alz_mri_cnn/
       run: |
-        ls -las
+        ls -las /tmp/alz_mri_cnn/
         cp -r 'pre_fetched_data/Alzheimer_s Dataset'/ /tmp/alz_mri_cnn/
+        echo COPY
+        ls -las /tmp/alz_mri_cnn/
 
     - name: Test with tox
       run: tox
