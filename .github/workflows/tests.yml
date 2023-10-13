@@ -31,16 +31,13 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      env:
-        KAGGLE_UAERNAME: ${{ secrets.KAGGLE_USERNAME }}
-        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
       run: |
         python -m pip install --upgrade pip
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
 
+    - name: Copy pre-fetched data to running dir /tmp/alz_mri_cnn/
+      run: cp 'data/Alzheimer_s Dataset' /tmp/alz_mri_cnn/
+
     - name: Test with tox
       run: tox
-      env:
-        KAGGLE_UAERNAME: ${{ secrets.KAGGLE_USERNAME }}
-        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}

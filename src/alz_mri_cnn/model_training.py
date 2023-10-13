@@ -11,7 +11,7 @@ from datetime import datetime
 from keras.preprocessing.image import ImageDataGenerator
 import pandas as pd
 from sklearn.model_selection import train_test_split
-import kaggle
+# import kaggle
 import shutil
 # from keras.callbacks import LearningRateScheduler
 
@@ -239,19 +239,21 @@ def train_model(
 
 
 def download_data_from_kaggle():
-    # Download dataset from kaggle
-    kaggle.api.authenticate()
-    try:
-        kaggle.api.dataset_download_files(
-            "tourist55/alzheimers-dataset-4-class-of-images",
-            path=RUNNING_DIR,
-            unzip=True,
-        )
-    except Exception as e:
-        print(
-            "Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials"
-        )
-        raise e
+    # # Download dataset from kaggle
+    # kaggle.api.authenticate()
+    # try:
+    #     kaggle.api.dataset_download_files(
+    #         "tourist55/alzheimers-dataset-4-class-of-images",
+    #         path=RUNNING_DIR,
+    #         unzip=True,
+    #     )
+    # except Exception as e:
+    #     print(
+    #         "Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials"
+    #     )
+    #     raise e
+    
+    
 
     # Separate zip into separate directories in data/
     dataset_dir = os.path.join(RUNNING_DIR, "Alzheimer_s Dataset")
