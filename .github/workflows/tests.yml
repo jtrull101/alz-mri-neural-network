@@ -30,13 +30,14 @@ jobs:
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
 
-    - name: Make script executable
-      run: chmod +x create_kaggle_json.sh
     - name: Create kaggle.json
-      run: sudo ./create_kaggle_json.sh ${{ secrets.KAGGLE_USERNAME }}, ${{ secrets.KAGGLE_KEY }} 
+      env:
+        KAGGLE_UAERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+      run: |
+        chmod +x create_kaggle_json.sh
+        sudo ./create_kaggle_json.sh '${KAGGLE_USERNAME}' '${KAGGLE_KEY}'
 
     - name: Test with tox
       run: |
-        export KAGGLE_USERNAME=${{ secrets.KAGGLE_USERNAME }}
-        export KAGGLE_KEY=${{ secrets.KAGGLE_KEY }}
         tox
