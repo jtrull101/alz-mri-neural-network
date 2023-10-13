@@ -160,11 +160,12 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-output/*
-static
-static/*.jpg
+src/alz_mri_cnn/output/*
+!src/alz_mri_cnn/static/alz_cnn_98%_acc_25_es_32_bs_0.001_lr_99%_data_0.05_loss_86_seconds.keras
+src/alz_mri_cnn/static/*.jpg
 
 *.pyc
 *.pyo
 *.pyc
 logs/
+
