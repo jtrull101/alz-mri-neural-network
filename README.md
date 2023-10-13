@@ -102,7 +102,7 @@ This software utility offers a simple and accessible way to predict Alzheimer's 
 
 Starting the Web User Interface (UI):
 
-    ./start_front_end.py
+    ./start_front_end.sh
 
   Sending MRI Files:
   <br>
