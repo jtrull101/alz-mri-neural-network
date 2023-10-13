@@ -8,11 +8,11 @@ touch ~/.kaggle/kaggle.json
 echo '{"username":'\"$username\"',"key":'\"$key\"'}' > ~/.kaggle/kaggle.json
 chmod 600 ~/.kaggle/kaggle.json
 
-# # typical kaggle dir
-# mkdir /root/.kaggle
-# touch /root/.kaggle/kaggle.json
-# echo '{"username":'\"$username\"',"key":'\"$key\"'}' > /root/.kaggle/kaggle.json
-# chmod 600 /root/.kaggle/kaggle.json
+# typical kaggle dir
+mkdir /root/.kaggle
+touch /root/.kaggle/kaggle.json
+echo '{"username":'\"$username\"',"key":'\"$key\"'}' > /root/.kaggle/kaggle.json
+chmod 600 /root/.kaggle/kaggle.json
 
 # git hub actions dir
 mkdir /home/runner/.kaggle

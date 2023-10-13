@@ -11,15 +11,15 @@ on:
     # Runs every day at 8 AM
     - cron: '0 8 * * *'
 
-
-
 jobs:
   testing:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [Ubuntu-latest, windows-latest ]
-        python-version: [ '3.7', '3.8', '3.9', '3.10'] 
+        # os: [Ubuntu-latest, windows-latest ]
+        # python-version: [ '3.7', '3.8', '3.9', '3.10'] 
+        os: [Ubuntu-latest]
+        python-version: [ '3.7'] 
       fail-fast: true
       max-parallel: 1
     steps:
@@ -38,8 +38,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox==3.24.3 tox-gh-actions==2.11.0
         pip install -r requirements_dev.txt
-        chmod +x create_kaggle_json.sh
-        sudo ./create_kaggle_json.sh '${KAGGLE_USERNAME}' '${KAGGLE_KEY}'
 
     - name: Test with tox
       run: tox
