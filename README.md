@@ -84,11 +84,15 @@ Installing this software is as simple as the few steps below:
 
 First, pull this git repo to a local directory and cd into that directory.
 
-Then just pip install the included requirements.txt file.
-* requirements.txt
-  ```sh
-  pip install -r requirements.txt
-  ```
+Next, upgrade pip:
+
+    python -m pip install --upgrade pip
+    
+Then pip install the included requirements.txt file.
+
+    pip install -r requirements.txt
+
+  Now you are ready to run tests or the front-end application.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -98,23 +102,21 @@ This software utility offers a simple and accessible way to predict Alzheimer's 
 
 Starting the Web User Interface (UI):
 
-    Run the Flask Server:
-        Start the Flask web user interface by executing the front_end.py script.
-        ```sh
-        py front_end.py
-        ```
+    python front_end.py
 
-Predicting Alzheimer's Diagnosis:
-
-    Sending MRI Files:
-        To predict Alzheimer's disease progression, send MRI image files to the http://127.0.0.1:5000/predict endpoint of the Flask server. Note these MRI files should be one of the fictitious MRIs present in the data/test/ directory. This model has zero ability to predict actual MRI images.
-
-    Interpreting Predictions:
-        The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
-            No Impairment
-            Very Mild Impairment
-            Mild Impairment
-            Moderate Impairment
+  Sending MRI Files:
+  <br>
+  <p>
+  To predict Alzheimer's disease progression, send MRI image files to the http://127.0.0.1:5000/predict endpoint of the Flask server. Note these MRI files should be one of the fictitious MRIs present in the data/test/ directory. This model has zero ability to predict actual MRI images.
+  </p>
+  Interpreting Predictions:
+  <p>
+  The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
+  </p>
+  <ul>No Impairment</ul>  
+  <ul>Very Mild Impairment</ul>
+  <ul>Mild Impairment</ul>  
+  <ul>Moderate Impairment</ul>  
 
 Using the Web UI:
 
