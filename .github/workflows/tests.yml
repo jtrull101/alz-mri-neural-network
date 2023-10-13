@@ -5,8 +5,13 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  - push
-  - pull_request
+  push:
+  pull_request:
+  schedule:
+    # Runs every day at 8 AM
+    - cron: '0 8 * * *'
+
+
 
 jobs:
   testing:
@@ -19,25 +24,25 @@ jobs:
       max-parallel: 1
     steps:
     - uses: actions/checkout@v2
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install tox==3.24.3 tox-gh-actions==2.11.0
-        pip install -r requirements_dev.txt
-
-    - name: Create kaggle.json
       env:
         KAGGLE_UAERNAME: ${{ secrets.KAGGLE_USERNAME }}
         KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
       run: |
+        python -m pip install --upgrade pip
+        pip install tox==3.24.3 tox-gh-actions==2.11.0
+        pip install -r requirements_dev.txt
         chmod +x create_kaggle_json.sh
         sudo ./create_kaggle_json.sh '${KAGGLE_USERNAME}' '${KAGGLE_KEY}'
 
     - name: Test with tox
-      run: |
-        tox
+      run: tox
+      env:
+        KAGGLE_UAERNAME: ${{ secrets.KAGGLE_USERNAME }}
+        KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
