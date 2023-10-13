@@ -102,7 +102,7 @@ This software utility offers a simple and accessible way to predict Alzheimer's 
 
 Starting the Web User Interface (UI):
 
-    python front_end.py
+    ./start_front_end.py
 
   Sending MRI Files:
   <br>
@@ -110,6 +110,7 @@ Starting the Web User Interface (UI):
   To predict Alzheimer's disease progression, send MRI image files to the http://127.0.0.1:5000/predict endpoint of the Flask server. Note these MRI files should be one of the fictitious MRIs present in the data/test/ directory. This model has zero ability to predict actual MRI images.
   </p>
   Interpreting Predictions:
+  <br>
   <p>
   The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
   </p>
@@ -117,20 +118,26 @@ Starting the Web User Interface (UI):
   <ul>Very Mild Impairment</ul>
   <ul>Mild Impairment</ul>  
   <ul>Moderate Impairment</ul>  
-
-Using the Web UI:
-
-    Accessing the Web Interface:
+  <br>
+  Using the Web UI:
+  <br>
+  <p>
+  Accessing the Web Interface:
         Open your web browser and navigate to http://127.0.0.1:5000. This will take you to a basic Graphical User Interface (GUI).
+  </p>
+  <br>
+  Selecting Impairment Categories:
+  <br>
+  <p>
+  On the web UI, you will find four buttons, each corresponding to a different level of impairment. By clicking on one of these buttons, you can initiate a prediction for that specific impairment category.
+  </p>
+  <br>
+  Testing the Model:
+  <p>
+  The utility will randomly select an MRI image from the training set for the chosen impairment category and run it through the predictive model.
 
-    Selecting Impairment Categories:
-        On the web UI, you will find four buttons, each corresponding to a different level of impairment.
-        By clicking on one of these buttons, you can initiate a prediction for that specific impairment category.
-
-    Testing the Model:
-        The utility will randomly select an MRI image from the training set for the chosen impairment category and run it through the predictive model.
-
-This utility provides a convenient and user-friendly way to predict Alzheimer's disease progression, making it accessible to both professionals and non-experts. By following these simple steps, you can quickly assess the likelihood of Alzheimer's disease in MRI images and gain insights into its progression.
+  This utility provides a convenient and user-friendly way to predict Alzheimer's disease progression, making it accessible to both professionals and non-experts. By following these simple steps, you can quickly assess the likelihood of Alzheimer's disease  in MRI images and gain insights into its progression.
+  </p>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
