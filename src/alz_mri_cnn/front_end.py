@@ -42,15 +42,12 @@ def get_model() -> keras.Model:
         found_models = []  # type: typing.List[keras.Model]
 
         def find_model_in_dir(dir):
-            for k in os.listdir(best_path_1):
+            for k in os.listdir(dir):
                 if '.keras' in k:
-                    found_models.append(os.path.join(best_path_1, k))
+                    found_models.append(os.path.join(dir, k))
 
         best_path_1 = os.path.join(RUNNING_DIR, "models")
         find_model_in_dir(best_path_1)
-
-        best_path_2 = os.path.join("static")
-        find_model_in_dir(best_path_2)
 
         best = None
         for model in found_models:
@@ -62,7 +59,7 @@ def get_model() -> keras.Model:
 
         model_accuracy, model_name = best   # type: ignore
 
-        print(f"loading model with accuracy={model_accuracy}")
+        print(f"loading model with accuracy = {model_accuracy}%")
         model = keras.models.load_model(model_name)
     return model
 
@@ -116,6 +113,7 @@ def get_random_of_class(chosen_class):
             images = os.listdir(os.path.join(dir, path))
     assert images
     image = random.choice(images)
+
     try:
         return predict_image(os.path.join(dir, CLASSES[index], image))
     except BaseException:
@@ -161,5 +159,8 @@ def predict():
 
 
 if __name__ == "__main__":
-    model = get_model()
+    # frontend must be run from src/alz_mri_cnn dir
+    new_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(new_dir)
+    print(f'cd into dir: {new_dir}')
     app.run(debug=True)

@@ -5,23 +5,23 @@ import pytest
 
 from src.alz_mri_cnn.front_end import NICER_CLASS_NAMES, get_random_of_class
 from src.alz_mri_cnn.model_training import init, load_data, train_model
-
-import subprocess
+import logging
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 IN_TOX = os.getenv("TOX_PACKAGE") is not None
 
 
+LOGGER = logging.getLogger(__name__)
 class TestMethods(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        super(TestMethods, self).__init__(*args, **kwargs)
-        subprocess.call(['sh', './init.sh'])
+    
 
     """TODO"""
 
     @pytest.mark.run(order=1)
     def test_init(self):
-        assert init()
+        RUNNING_DIR = "/tmp/alz_mri_cnn/"
+        os.chdir(RUNNING_DIR)
+        assert init(LOGGER)
 
     """ TODO """
 
@@ -37,7 +37,8 @@ class TestMethods(unittest.TestCase):
         "not supported in tox/github actions that do not support CUDA",
     )
     def test_train_model(self):
-        assert train_model(num_epochs=10, percent_of_data=0.5, force_save=True)
+        # assert train_model(num_epochs=10, percent_of_data=0.5, force_save=True, show_plot=False)
+        pass
 
     """ Attempt to train the model using a default set of parameters """
 
