@@ -42,7 +42,7 @@ RUNNING_DIR = "/tmp/alz_mri_cnn/"
 # DATASET_NAME = "Alzheimer_s Dataset"
 DATASET_NAME = "Combined Dataset"
 
-BASE_LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger(__name__)
 
 class ImageDataset(object):
     def __init__(self, PATH="", TRAIN=False):
@@ -513,9 +513,8 @@ def parsed_unzipped_data():
 
 TRAIN_DIR = os.path.join(RUNNING_DIR, "data", "train")
 TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
-def init(LOGGER=BASE_LOGGER):
+def init():
     
-    LOGGER.info("entered init")
     required_paths = [
         RUNNING_DIR,
         os.path.join(RUNNING_DIR, "logs"),
@@ -525,7 +524,6 @@ def init(LOGGER=BASE_LOGGER):
     for p in required_paths:
         if not os.path.exists(p):
             os.makedirs(p)
-            LOGGER.info(f"created directory:{p}")
     
     required_files = {
         os.path.join(required_paths[3], 'optimal_weights_98%.keras'):'1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
@@ -537,28 +535,24 @@ def init(LOGGER=BASE_LOGGER):
     
     for k,v in required_files.items():
         download_from_google_drive(v, k)
-        LOGGER.info(f"downloaded file from google drive: {k}")
     
     # Unzip downloaded data
     unzip_data()
-    LOGGER.info("unzipped data")
     
     def check_train_test_dirs():
-        LOGGER.info("checking train/test dirs")
         if pathlib.Path(TRAIN_DIR).exists() and pathlib.Path(TEST_DIR).exists():
             assert len(os.listdir(TRAIN_DIR)) > 0
             assert len(os.listdir(TEST_DIR)) > 0
             return True
         return False
     
-    if check_train_test_dirs(): return
+    if check_train_test_dirs(): return True
     
     parsed_unzipped_data()
-    LOGGER.info(f"finished parsing unzipped data")
     
-    if check_train_test_dirs(): return
+    if check_train_test_dirs(): return True
     
-    return True
+    return False
 
 
 def main():

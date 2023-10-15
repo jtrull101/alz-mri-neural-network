@@ -9,9 +9,8 @@ import logging
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 IN_TOX = os.getenv("TOX_PACKAGE") is not None
+RUNNING_DIR = "/tmp/alz_mri_cnn/"
 
-
-LOGGER = logging.getLogger(__name__)
 class TestMethods(unittest.TestCase):
     
 
@@ -19,9 +18,9 @@ class TestMethods(unittest.TestCase):
 
     @pytest.mark.run(order=1)
     def test_init(self):
-        RUNNING_DIR = "/tmp/alz_mri_cnn/"
+        
         os.chdir(RUNNING_DIR)
-        assert init(LOGGER)
+        assert init()
 
     """ TODO """
 
