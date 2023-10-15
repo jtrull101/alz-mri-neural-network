@@ -3,7 +3,7 @@ import unittest
 
 import pytest
 
-from src.alz_mri_cnn.front_end import NICER_CLASS_NAMES, get_random_of_class
+from src.alz_mri_cnn.front_end import get_categories, get_random_of_class
 from src.alz_mri_cnn.model_training import init, load_data, train_model
 
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
@@ -42,5 +42,5 @@ class TestMethods(unittest.TestCase):
 
     @pytest.mark.run(order=3)
     def test_random_of_class(self):
-        for c in NICER_CLASS_NAMES:
+        for c in get_categories(None):
             assert get_random_of_class(c)

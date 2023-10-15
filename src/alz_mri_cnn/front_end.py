@@ -1,4 +1,6 @@
 import os
+import pathlib
+import pickle
 import random
 import shutil
 import typing
@@ -13,21 +15,6 @@ IMG_SIZE = (128, 128)
 # IMG_SIZE = (128//2, 128//2)
 
 RUNNING_DIR = "/tmp/alz_mri_cnn/"
-
-NICER_CLASS_NAMES = [
-    "Mild Impairment",
-    "No Impairment",
-    "Moderate Impairment",
-    "Very Mild Impairment",
-]
-CLASSES = [
-    "MildDemented",
-    "NonDemented",
-    "ModerateDemented",
-    "VeryMildDemented",
-]
-
-
 app = Flask(__name__)
 
 
@@ -59,9 +46,23 @@ def get_model() -> keras.Model:
 
         model_accuracy, model_name = best   # type: ignore
 
-        print(f"loading model with accuracy = {model_accuracy}%")
+        print(f"    loading model: {model_name} with accuracy: {model_accuracy}%")
         model = keras.models.load_model(model_name)
     return model
+
+
+CATEGORIES = None
+
+
+def get_categories(CATEGORIES=CATEGORIES):
+    if not CATEGORIES:
+        category_file = os.path.join(RUNNING_DIR, 'data', 'categories')
+        if pathlib.Path(category_file).exists():
+            file = open(category_file, 'rb')
+            CATEGORIES = pickle.load(file)
+
+        assert CATEGORIES
+    return CATEGORIES
 
 
 @app.route("/", methods=["POST", "GET"])
@@ -71,11 +72,14 @@ def on_start():
         of that class and the prediction the model gave.
     """
     if request.method == "POST":
-        image, prediction, confidence = get_random_of_class(
-            request.form.get("impairment_val")
-        )
+        class_name = request.form.get("impairment_val")
+        print(f'    searching for random image of class_name: {class_name}')
+        image, prediction, confidence = get_random_of_class(class_name)
     elif request.method == "GET":
         return render_template("index.html")
+
+    if not model:
+        get_model()
 
     # Clear out the static dir of all previous entries (jpgs)
     for p in os.listdir("static"):
@@ -102,22 +106,17 @@ def get_random_of_class(chosen_class):
     """
     With the specified chosen_class, find a random image and get a prediction of that image from the model.
     """
-    if chosen_class in NICER_CLASS_NAMES:
-        index = NICER_CLASS_NAMES.index(chosen_class)
-    elif chosen_class in CLASSES:
-        index = CLASSES.index(chosen_class)
+    if chosen_class in get_categories():
+        index = get_categories().index(chosen_class)
 
     dir = os.path.join(RUNNING_DIR, "data", "test")
     for path in os.listdir(dir):
-        if path == CLASSES[index] or path == NICER_CLASS_NAMES[index]:
+        if path == get_categories()[index]:
             images = os.listdir(os.path.join(dir, path))
     assert images
     image = random.choice(images)
 
-    try:
-        return predict_image(os.path.join(dir, CLASSES[index], image))
-    except BaseException:
-        return predict_image(os.path.join(dir, NICER_CLASS_NAMES[index], image))
+    return predict_image(os.path.join(dir, get_categories()[index], image))
 
 
 def predict_image(path):
@@ -133,7 +132,7 @@ def predict_image(path):
     x_data_reshape = np.reshape(x_data, (1, IMG_SIZE[0], IMG_SIZE[1], 3))
     probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
-    return (path, NICER_CLASS_NAMES[max], int(probabilities[0][max] * 100))
+    return (path, get_categories()[max], int(probabilities[0][max] * 100))
 
 
 @app.route("/predict", methods=["POST"])
@@ -163,4 +162,7 @@ if __name__ == "__main__":
     new_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(new_dir)
     print(f'cd into dir: {new_dir}')
+
+    get_categories()
+
     app.run(debug=True)

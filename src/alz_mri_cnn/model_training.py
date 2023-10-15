@@ -244,6 +244,12 @@ def load_data(percent_of_data: float = 0.5):
 
     train = ImageDataset(PATH=f"{PATH}/Combined Dataset/train", TRAIN=True)
     test = ImageDataset(PATH=f"{PATH}/Combined Dataset/test", TRAIN=False)
+    categories = train.get_categories()
+    test_categories = test.get_categories()
+    assert categories == test_categories
+    # write out category file
+    with open(os.path.join(PATH, "categories"), "wb") as f:
+        pickle.dump(categories, f)
 
     # Load dataset
     x_train, y_train = train.load_data()
@@ -383,13 +389,15 @@ def train_model(
         )
         model.build()
 
-        callbacks = accuracy_stopper()
+        # create callbacks
+        acc_stop_callback = accuracy_stopper()
         # lr_scheduler = LearningRateScheduler(lambda epoch: 1e-3 * 10**(epoch / 20))
         early_stopping = EarlyStopping(monitor='val_loss', mode='min', patience=20, verbose=1)
         optimal_weights_path = os.path.join(RUNNING_DIR, 'models')
         filepath = os.path.join(optimal_weights_path, 'optimal_weights_{val_acc:.0%}.keras')
         val_acc_checkpoint = ModelCheckpoint(filepath, monitor='val_acc', mode='max', save_best_only=True, verbose=1, initial_value_threshold=0.9)
-        callback_list = [callbacks, early_stopping, val_acc_checkpoint]
+        callback_list = [acc_stop_callback, early_stopping, val_acc_checkpoint]
+
         # Fit the model
         history = model.fit(
             x_train, y_train,
@@ -424,22 +432,16 @@ def train_model(
         out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
 
         if force_save or acc >= 0.5:
-            # Save the model only if accuracy is over 98%
-            if force_save or acc >= 0.98:
-                name = f"alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
-                model.save(os.path.join(RUNNING_DIR, "models", name), "a")
-            f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
-            f.write(out)
-            f.close()
+            with open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a") as f:
+                f.write(out)
         # Delete the history object for garbage collection
         del history
     except Exception as ex:
         # Write failure and exception to log
         print("logging failure...")
         print(ex)
-        f = open(os.path.join(RUNNING_DIR, "logs", "failures.log"), "a")
-        f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
-        f.close()
+        with open(os.path.join(RUNNING_DIR, "logs", "failures.log"), "a") as f:
+            f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         time.sleep(2.0)
         return False
     finally:
@@ -565,13 +567,12 @@ def main():
     """
     init()
 
-    # Create starting log, indicating structure of logs
-    f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
-    f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
-    f.write(
-        "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
-    )
-    f.close()
+    # Create starting log, indicating structure of log
+    with open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a") as f:
+        f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
+        f.write(
+            "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
+        )
 
     data_subets = [1]        # may need to downsample images before using more data
     epochs = [250]  # [25, 50, 75, 100]  # 'random' scaling numbers
