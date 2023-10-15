@@ -1,13 +1,13 @@
 import os
 import random
 import shutil
+import typing
 
 import cv2
 import keras
 import numpy as np
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
-import typing
 
 IMG_SIZE = (128, 128)
 # IMG_SIZE = (128//2, 128//2)

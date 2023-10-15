@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Tuple
 
 import cv2
+import gdown
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -17,15 +18,13 @@ import seaborn as sns
 import tensorflow as tf
 # from image_dataset import ImageDataset
 from keras import backend as K
-from keras.callbacks import (EarlyStopping, ModelCheckpoint)
-from keras.layers import (Conv2D, Dense, Dropout, Flatten,
-                          MaxPooling2D)
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
 from PIL import Image
+from pyunpack import Archive
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-from pyunpack import Archive
-import gdown
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
