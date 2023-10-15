@@ -7,3 +7,4 @@ mypy==0.910
 importlib-metadata==4.13.0
 tox-conda==0.10.2
 # tensorflow==1.15.0
+pyunpack==0.3

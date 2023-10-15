@@ -14,3 +14,5 @@ importlib-metadata==4.13.0
 tox-conda==0.10.2
 seaborn==0.12.2
 matplotlib==3.5.3
+gdown==4.7.1
+pyunpack==0.3

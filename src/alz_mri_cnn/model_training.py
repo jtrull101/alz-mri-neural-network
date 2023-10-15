@@ -10,6 +10,7 @@ from datetime import datetime
 from typing import Tuple
 
 import cv2
+import gdown
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -17,11 +18,11 @@ import seaborn as sns
 import tensorflow as tf
 # from image_dataset import ImageDataset
 from keras import backend as K
-from keras.callbacks import (EarlyStopping, ModelCheckpoint)
-from keras.layers import (Conv2D, Dense, Dropout, Flatten,
-                          MaxPooling2D)
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
 from PIL import Image
+from pyunpack import Archive
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
@@ -35,6 +36,8 @@ RUNNING_DIR = "/tmp/alz_mri_cnn/"
 
 # DATASET_NAME = "Alzheimer_s Dataset"
 DATASET_NAME = "Combined Dataset"
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ImageDataset(object):
@@ -348,6 +351,7 @@ def train_model(
     batch_size=32,
     learning_rate=0.001,
     force_save=False,
+    show_plot=False
 ):
     """
     Given the specified percent_of_data, num_epochs, batch_size and learning_rate, first create a model, then compile, build, and finally
@@ -396,17 +400,19 @@ def train_model(
             callbacks=callback_list
         )
 
-        # Plot loss & accuracy over each epoch using matplotlib and seaborn
-        df = pd.DataFrame(history.history).rename_axis('epoch').reset_index().melt(id_vars=['epoch'])
-        fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-        for ax, mtr in zip(axes.flat, ['loss', 'acc']):
-            ax.set_title(f'{mtr.title()} Plot')
-            dfTmp = df[df['variable'].str.contains(mtr)]
-            sns.lineplot(data=dfTmp, x='epoch', y='value', hue='variable', ax=ax)
-        fig.tight_layout()
-        plt.show()
-
         end = time.time()
+
+        if show_plot:
+            # Plot loss & accuracy over each epoch using matplotlib and seaborn
+            df = pd.DataFrame(history.history).rename_axis('epoch').reset_index().melt(id_vars=['epoch'])
+            fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+            for ax, mtr in zip(axes.flat, ['loss', 'acc']):
+                ax.set_title(f'{mtr.title()} Plot')
+                dfTmp = df[df['variable'].str.contains(mtr)]
+                sns.lineplot(data=dfTmp, x='epoch', y='value', hue='variable', ax=ax)
+            fig.tight_layout()
+            plt.show()
+
         # Evaluate the model on the test set
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
@@ -459,23 +465,28 @@ def download_data_from_kaggle():
     #         "Unable to download dataset from kaggle, check ~/.kaggle/kaggle.json has active credentials"
     #     )
     #     raise e
+    pass
+
+
+def download_from_google_drive(id, destination):
+    url = f'https://docs.google.com/uc?id={id}'
+    gdown.download(url, destination, quiet=False)
+    print()
+
+
+def unzip_data():
+    desired_dir = os.path.join(RUNNING_DIR, 'data')
+    zip_dataset_dir = os.path.join(desired_dir, f'{DATASET_NAME}.zip')
 
     # Separate zip into separate directories in data/
-    dataset_dir = os.path.join(RUNNING_DIR, DATASET_NAME)
-    if pathlib.Path(dataset_dir).exists():
-        for dir in os.listdir(dataset_dir):
-            if pathlib.Path(os.path.join(RUNNING_DIR, "data", dir)).exists():
-                shutil.rmtree(os.path.join(RUNNING_DIR, "data", dir))
+    if pathlib.Path(zip_dataset_dir).exists():
+        if not pathlib.Path(desired_dir).exists():
+            os.makedirs(desired_dir)
 
-            shutil.move(os.path.join(dataset_dir, dir), os.path.join(RUNNING_DIR, "data"))
-        os.rmdir(dataset_dir)
+        Archive(zip_dataset_dir).extractall(desired_dir)
 
-    train_dir = os.path.join(RUNNING_DIR, "data", "train")
-    test_dir = os.path.join(RUNNING_DIR, "data", "test")
-    if pathlib.Path(train_dir).exists():
-        assert len(os.listdir(train_dir)) > 0
-        return
 
+def parsed_unzipped_data():
     # handle previously unzipped data
     dataset_dir = os.path.join(RUNNING_DIR, 'data', DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
@@ -498,28 +509,57 @@ def download_data_from_kaggle():
                     if os.path.isfile(source):
                         shutil.copy(source, destination)
 
-    assert len(os.listdir(train_dir)) > 0
-    assert len(os.listdir(test_dir)) > 0
+
+TRAIN_DIR = os.path.join(RUNNING_DIR, "data", "train")
+TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
 
 
 def init():
+
     required_paths = [
         RUNNING_DIR,
         os.path.join(RUNNING_DIR, "logs"),
         os.path.join(RUNNING_DIR, "data"),
+        os.path.join(RUNNING_DIR, "models")
     ]
     for p in required_paths:
         if not os.path.exists(p):
             os.makedirs(p)
-        print(f"The new directory {p} is created!")
-    os.chdir(RUNNING_DIR)
+
+    required_files = {
+        os.path.join(required_paths[3], 'optimal_weights_98%.keras'): '1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
+        os.path.join(required_paths[2], 'Combined Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
+    }
 
     # Download data using the Kaggle API
-    download_data_from_kaggle()
-    return True
+    #   download_data_from_kaggle()
+
+    for k, v in required_files.items():
+        download_from_google_drive(v, k)
+
+    # Unzip downloaded data
+    unzip_data()
+
+    def check_train_test_dirs():
+        if pathlib.Path(TRAIN_DIR).exists() and pathlib.Path(TEST_DIR).exists():
+            assert len(os.listdir(TRAIN_DIR)) > 0
+            assert len(os.listdir(TEST_DIR)) > 0
+            return True
+        return False
+
+    if check_train_test_dirs():
+        return True
+
+    parsed_unzipped_data()
+
+    if check_train_test_dirs():
+        return True
+
+    return False
 
 
 def main():
+    os.chdir(RUNNING_DIR)
     """
     Main function - perform model training over many iterations
     """
