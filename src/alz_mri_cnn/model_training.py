@@ -7,7 +7,6 @@ import pickle
 import shutil
 import time
 from datetime import datetime
-import token
 from typing import Tuple
 
 import cv2
@@ -25,9 +24,6 @@ from keras.models import Sequential
 from PIL import Image
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
-import subprocess
-import requests
-from zipfile import ZipFile
 from pyunpack import Archive
 import gdown
 
@@ -43,6 +39,7 @@ RUNNING_DIR = "/tmp/alz_mri_cnn/"
 DATASET_NAME = "Combined Dataset"
 
 LOGGER = logging.getLogger(__name__)
+
 
 class ImageDataset(object):
     def __init__(self, PATH="", TRAIN=False):
@@ -405,7 +402,7 @@ def train_model(
         )
 
         end = time.time()
-        
+
         if show_plot:
             # Plot loss & accuracy over each epoch using matplotlib and seaborn
             df = pd.DataFrame(history.history).rename_axis('epoch').reset_index().melt(id_vars=['epoch'])
@@ -474,21 +471,23 @@ def download_data_from_kaggle():
 
 def download_from_google_drive(id, destination):
     url = f'https://docs.google.com/uc?id={id}'
-    gdown.download(url, destination, quiet=False) 
+    gdown.download(url, destination, quiet=False)
     print()
+
 
 def unzip_data():
     desired_dir = os.path.join(RUNNING_DIR, 'data')
     zip_dataset_dir = os.path.join(desired_dir, f'{DATASET_NAME}.zip')
-    
+
     # Separate zip into separate directories in data/
     if pathlib.Path(zip_dataset_dir).exists():
         if not pathlib.Path(desired_dir).exists():
             os.makedirs(desired_dir)
-            
-        Archive(zip_dataset_dir).extractall(desired_dir)   
-    
-def parsed_unzipped_data(): 
+
+        Archive(zip_dataset_dir).extractall(desired_dir)
+
+
+def parsed_unzipped_data():
     # handle previously unzipped data
     dataset_dir = os.path.join(RUNNING_DIR, 'data', DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
@@ -511,10 +510,13 @@ def parsed_unzipped_data():
                     if os.path.isfile(source):
                         shutil.copy(source, destination)
 
+
 TRAIN_DIR = os.path.join(RUNNING_DIR, "data", "train")
 TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
+
+
 def init():
-    
+
     required_paths = [
         RUNNING_DIR,
         os.path.join(RUNNING_DIR, "logs"),
@@ -524,34 +526,36 @@ def init():
     for p in required_paths:
         if not os.path.exists(p):
             os.makedirs(p)
-    
+
     required_files = {
-        os.path.join(required_paths[3], 'optimal_weights_98%.keras'):'1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
-        os.path.join(required_paths[2], 'Combined Dataset.zip'):'1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
+        os.path.join(required_paths[3], 'optimal_weights_98%.keras'): '1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
+        os.path.join(required_paths[2], 'Combined Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
     }
-        
+
     # Download data using the Kaggle API
     #   download_data_from_kaggle()
-    
-    for k,v in required_files.items():
+
+    for k, v in required_files.items():
         download_from_google_drive(v, k)
-    
+
     # Unzip downloaded data
     unzip_data()
-    
+
     def check_train_test_dirs():
         if pathlib.Path(TRAIN_DIR).exists() and pathlib.Path(TEST_DIR).exists():
             assert len(os.listdir(TRAIN_DIR)) > 0
             assert len(os.listdir(TEST_DIR)) > 0
             return True
         return False
-    
-    if check_train_test_dirs(): return True
-    
+
+    if check_train_test_dirs():
+        return True
+
     parsed_unzipped_data()
-    
-    if check_train_test_dirs(): return True
-    
+
+    if check_train_test_dirs():
+        return True
+
     return False
 
 
