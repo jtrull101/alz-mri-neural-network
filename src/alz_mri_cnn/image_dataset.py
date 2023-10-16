@@ -7,16 +7,15 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-from alz_mri_cnn.utils import RUNNING_DIR
+from alz_mri_cnn.utils import DATA_DIR
 
 
 class ImageDataset(object):
     def __init__(self, PATH="", TRAIN=False):
         self.PATH = PATH
-        self.TRAIN = TRAIN
         self.NUM_CATEGORIES = 0
         self.WIDTH, self.HEIGHT = None, None
-
+        self.test_type = "train" if TRAIN else "test"
         (
             self.image_data,
             self.x_data,
@@ -69,6 +68,7 @@ class ImageDataset(object):
         for path in os.listdir(self.PATH):
             if path not in self.list_categories:
                 self.list_categories.append(path)
+
         print("Found Categories ", self.list_categories, "\n")
         self.NUM_CATEGORIES = len(self.list_categories)
         return self.list_categories
@@ -83,9 +83,8 @@ class ImageDataset(object):
             for c in tqdm(self.CATEGORIES):  # Iterate over categories
                 print(f"processing category:{c}")
                 folder_path = os.path.join(self.PATH, c)  # Folder Path
-                class_index = self.CATEGORIES.index(
-                    c
-                )  # this will get index for classification
+                # this will get index for classification
+                class_index = self.CATEGORIES.index(c)
 
                 for img in tqdm(os.listdir(folder_path)):
                     new_path = os.path.join(folder_path, img)  # image Path
@@ -110,13 +109,10 @@ class ImageDataset(object):
                 self.x_data.append(x[0])  # Get the X_Data
                 self.y_data.append(x[1])  # get the label
 
-            X_Data = np.asarray(self.x_data) / (
-                255.0
-            )  # type: np.typing.NDArray[np.float64]
+            X_Data = np.asarray(self.x_data) / 255.0
             Y_Data = np.asarray(self.y_data)
 
             # reshape x_Data
-
             X_Data = X_Data.reshape(-1, self.WIDTH, self.HEIGHT, 3)  # type: ignore
             return X_Data, Y_Data
         except Exception as e:
@@ -126,42 +122,32 @@ class ImageDataset(object):
         """
         :return: None Creates a Pickle Object of DataSet
         """
+        x_data = os.path.join(DATA_DIR, f"X_Data_{self.test_type}")
+        y_data = os.path.join(DATA_DIR, f"Y_Data_{self.test_type}")
         # Call the Function and Get the Data
         img = self.process_image()
         if img:
-            X_Data, Y_Data = img
-
             # Write the Entire Data into a Pickle File
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(X_Data, x_out)
-            x_out.close()
+            with open(x_data, "wb") as x_out:
+                pickle.dump(img[0], x_out)
 
             # Write the Y Label Data
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(Y_Data, y_out)
-            y_out.close()
+            with open(y_data, "wb") as y_out:
+                pickle.dump(img[1], y_out)
 
             print("Pickled Image Successfully ")
-            return X_Data, Y_Data
+            return img
 
     def load_data(self):
+        x_data = os.path.join(DATA_DIR, f"X_Data_{self.test_type}")
+        y_data = os.path.join(DATA_DIR, f"Y_Data_{self.test_type}")
         try:
             # Read the Data from Pickle Object
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            X_Data = pickle.load(x_out)
-            x_out.close()
+            with open(x_data, "rb") as x_out:
+                X_Data = pickle.load(x_out)
 
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            Y_Data = pickle.load(y_out)
-            y_out.close()
+            with open(y_data, "rb") as y_out:
+                Y_Data = pickle.load(y_out)
 
             print("Reading Dataset from Pickle Object")
             return X_Data, Y_Data
@@ -172,8 +158,7 @@ class ImageDataset(object):
 
             pickled = self.pickle_image()
             if pickled:
-                X_Data, Y_Data = pickled
-                return X_Data, Y_Data
+                return pickled
             else:
                 print("Unable to pickle image successfully")
                 assert False

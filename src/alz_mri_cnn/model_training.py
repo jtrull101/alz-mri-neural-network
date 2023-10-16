@@ -22,7 +22,9 @@ from keras.models import Sequential
 from pyunpack import Archive
 
 from alz_mri_cnn.image_dataset import ImageDataset
-from alz_mri_cnn.utils import DATASET_NAME, IMG_SIZE, RUNNING_DIR
+from alz_mri_cnn.utils import (DATA_DIR, DATASET_NAME, IMG_SIZE, LOGS_DIR,
+                               MODELS_DIR, REQUIRED_PATHS, RUNNING_DIR,
+                               TEST_DIR, TRAIN_DIR)
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
@@ -56,21 +58,24 @@ def reduce_size_of_dataset(
         x_cv[test_indices],
         y_cv[test_indices],
     )
-    assert pre_reduce_samples >= x_train.shape[0]
+    assert pre_reduce_samples <= x_train.shape[0]
     return x_train, y_train, x_test, y_test, x_cv, y_cv
 
 
 def load_data(percent_of_data: float = 0.5):
     # Create ImageDataset objects
-    PATH = f"{RUNNING_DIR}/data/"
 
-    train = ImageDataset(PATH=f"{PATH}/Combined Dataset/train", TRAIN=True)
-    test = ImageDataset(PATH=f"{PATH}/Combined Dataset/test", TRAIN=False)
+    train = ImageDataset(
+        PATH=os.path.join(DATA_DIR, "Combined Dataset", "train"), TRAIN=True
+    )
+    test = ImageDataset(
+        PATH=os.path.join(DATA_DIR, "Combined Dataset", "test"), TRAIN=False
+    )
     categories = train.get_categories()
     test_categories = test.get_categories()
     assert categories == test_categories
     # write out category file
-    with open(os.path.join(PATH, "categories"), "wb") as f:
+    with open(os.path.join(DATA_DIR, "categories"), "wb") as f:
         pickle.dump(categories, f)
 
     # Load dataset
@@ -91,7 +96,7 @@ def load_data(percent_of_data: float = 0.5):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
     y_cv = tf.keras.utils.to_categorical(y_cv, num_classes)
 
-    return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
+    return x_train, y_train, x_test, y_test, x_cv, y_cv
 
 
 class accuracy_stopper(tf.keras.callbacks.Callback):
@@ -166,9 +171,7 @@ def train_model(
     """
     try:
         # (train_gen, num_train_samples), (validation_gen,_), (test_gen,_) = load_data(percent_of_data, batch_size)
-        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(
-            percent_of_data
-        )
+        x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
 
         # Start a timer to capture time to train the model
         start = time.time()
@@ -235,6 +238,7 @@ def train_model(
 
         # Evaluate the model on the test set
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
+
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
         acc_perc = f"{int(acc*100)}%"
@@ -244,7 +248,7 @@ def train_model(
         out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
 
         if force_save or acc >= 0.5:
-            with open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a") as f:
+            with open(os.path.join(LOGS_DIR, "histories.log"), "a") as f:
                 f.write(out)
         # Delete the history object for garbage collection
         del history
@@ -252,7 +256,7 @@ def train_model(
         # Write failure and exception to log
         print("logging failure...")
         print(ex)
-        with open(os.path.join(RUNNING_DIR, "logs", "failures.log"), "a") as f:
+        with open(os.path.join(LOGS_DIR, "failures.log"), "a") as f:
             f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         time.sleep(2.0)
         return False
@@ -289,20 +293,16 @@ def download_from_google_drive(id, destination):
 
 
 def unzip_data():
-    desired_dir = os.path.join(RUNNING_DIR, "data")
-    zip_dataset_dir = os.path.join(desired_dir, f"{DATASET_NAME}.zip")
+    zip_dataset_dir = os.path.join(DATA_DIR, f"{DATASET_NAME}.zip")
 
     # Separate zip into separate directories in data/
     if pathlib.Path(zip_dataset_dir).exists():
-        if not pathlib.Path(desired_dir).exists():
-            os.makedirs(desired_dir)
-
-        Archive(zip_dataset_dir).extractall(desired_dir)
+        Archive(zip_dataset_dir).extractall(DATA_DIR)
 
 
 def parsed_unzipped_data():
     # handle previously unzipped data
-    dataset_dir = os.path.join(RUNNING_DIR, "data", DATASET_NAME)
+    dataset_dir = os.path.join(DATA_DIR, DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
         # Test/train
         for dir in os.listdir(dataset_dir):
@@ -315,7 +315,7 @@ def parsed_unzipped_data():
                         subdir_path,
                         filename,
                     )
-                    smaller_dir = os.path.join(RUNNING_DIR, "data", dir)
+                    smaller_dir = os.path.join(DATA_DIR, dir)
                     desired_dir = os.path.join(smaller_dir, subdir)
                     if not os.path.isdir(smaller_dir):
                         os.mkdir(smaller_dir)
@@ -327,27 +327,17 @@ def parsed_unzipped_data():
                         shutil.copy(source, destination)
 
 
-TRAIN_DIR = os.path.join(RUNNING_DIR, "data", "train")
-TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
-
-
 def init():
-    required_paths = [
-        RUNNING_DIR,
-        os.path.join(RUNNING_DIR, "logs"),
-        os.path.join(RUNNING_DIR, "data"),
-        os.path.join(RUNNING_DIR, "models"),
-    ]
-    for p in required_paths:
+    for p in REQUIRED_PATHS:
         if not os.path.exists(p):
             os.makedirs(p)
 
     required_files = {
         os.path.join(
-            required_paths[3], "optimal_weights_98%.keras"
+            MODELS_DIR, "optimal_weights_98%.keras"
         ): "1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ",
         os.path.join(
-            required_paths[2], "Combined Dataset.zip"
+            DATA_DIR, "Combined Dataset.zip"
         ): "1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN",
     }
 
@@ -365,7 +355,6 @@ def init():
             assert len(os.listdir(TRAIN_DIR)) > 0
             assert len(os.listdir(TEST_DIR)) > 0
             return True
-        return False
 
     if check_train_test_dirs():
         return True
@@ -379,14 +368,14 @@ def init():
 
 
 def main():
-    os.chdir(RUNNING_DIR)
     """
     Main function - perform model training over many iterations
     """
     init()
+    os.chdir(RUNNING_DIR)
 
     # Create starting log, indicating structure of log
-    with open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a") as f:
+    with open(os.path.join(LOGS_DIR, "histories.log"), "a") as f:
         f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
         f.write(
             "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
@@ -394,7 +383,7 @@ def main():
 
     data_subets = [1]  # may need to downsample images before using more data
     epochs = [250]  # [25, 50, 75, 100]  # 'random' scaling numbers
-    batch_sizes = [20]  # powers of 2
+    batch_sizes = [32]  # powers of 2
     learning_rates = [0.001]
     for data_sub in data_subets:
         for epoch in epochs:
@@ -402,7 +391,9 @@ def main():
                 for learn_rate in learning_rates:
                     # Train the model over many iterations of the following:
                     #   percentage of data, number of epochs, batch size, and learning rates
-                    result = train_model(data_sub, epoch, batch, learn_rate)
+                    result = train_model(
+                        data_sub, epoch, batch, learn_rate, show_plot=True
+                    )
     return result
 
 
