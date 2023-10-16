@@ -3,210 +3,34 @@ import logging
 import os
 import pathlib
 import pickle
+
 # import kaggle
 import shutil
 import time
 from datetime import datetime
-from typing import Tuple
 
-import cv2
 import gdown
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+
 # from image_dataset import ImageDataset
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
-from PIL import Image
 from pyunpack import Archive
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
+
+from alz_mri_cnn.image_dataset import ImageDataset
+from alz_mri_cnn.utils import DATASET_NAME, IMG_SIZE, RUNNING_DIR
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
 
 
-IMG_SIZE = (128, 128)
-# IMG_SIZE = (128//2, 128//2)
-RUNNING_DIR = "/tmp/alz_mri_cnn/"
-
-# DATASET_NAME = "Alzheimer_s Dataset"
-DATASET_NAME = "Combined Dataset"
-
 LOGGER = logging.getLogger(__name__)
-
-
-class ImageDataset(object):
-    def __init__(self, PATH="", TRAIN=False):
-        self.PATH = PATH
-        self.TRAIN = TRAIN
-        self.NUM_CATEGORIES = 0
-        self.WIDTH, self.HEIGHT = None, None
-
-        (
-            self.image_data,
-            self.x_data,
-            self.y_data,
-            self.CATEGORIES,
-            self.list_categories,
-        ) = ([], [], [], [], [])
-
-    def get_num_categories(self) -> int:
-        """
-        Return the number of categories found in the directory associated with this image dataset
-        """
-        if self.NUM_CATEGORIES == 0:
-            self.get_categories()
-        return self.NUM_CATEGORIES
-
-    def get_width_height_from_imgs_in_path(self, path):
-        """
-        Get the first image in path and return the size associated
-        """
-        for img in os.listdir(path):
-            new_path = os.path.join(path, img)
-            return Image.open(new_path).size
-        print(f"ERROR: Unable to find any image in path! path={path}")
-        assert False
-
-    def get_image_dimensions(self) -> Tuple[int, int]:
-        """
-        Get the WIDTH and HEIGHT associated with the images in this image dataset. Note this is using an assumption that
-            all images will be of the same size. Could use a tensorflow generator to force a consistent size
-        """
-        if self.WIDTH and self.HEIGHT:
-            return self.WIDTH, self.HEIGHT
-
-        while not self.WIDTH or not self.HEIGHT:
-            self.CATEGORIES = self.get_categories()
-            for c in self.CATEGORIES:
-                self.WIDTH, self.HEIGHT = self.get_width_height_from_imgs_in_path(
-                    os.path.join(self.PATH, c)
-                )
-                if self.WIDTH and self.HEIGHT:
-                    break
-
-        return self.WIDTH, self.HEIGHT
-
-    def get_categories(self):
-        """
-        Get all categories that can be found associated with this image dataset. Note that categories will be subdirectories in this dataset
-        """
-        for path in os.listdir(self.PATH):
-            if path not in self.list_categories:
-                self.list_categories.append(path)
-        print("Found Categories ", self.list_categories, "\n")
-        self.NUM_CATEGORIES = len(self.list_categories)
-        return self.list_categories
-
-    def process_image(self):
-        try:
-            """
-            Return Numpy array of image
-            :return: X_Data, Y_Data
-            """
-            self.CATEGORIES = self.get_categories()
-            for c in tqdm(self.CATEGORIES):  # Iterate over categories
-                print(f"processing category:{c}")
-                folder_path = os.path.join(self.PATH, c)  # Folder Path
-                class_index = self.CATEGORIES.index(
-                    c
-                )  # this will get index for classification
-
-                for img in tqdm(os.listdir(folder_path)):
-                    new_path = os.path.join(folder_path, img)  # image Path
-                    self.WIDTH, self.HEIGHT = Image.open(new_path).size
-                    try:  # if any image is corrupted
-                        image_data_temp = cv2.imread(new_path)  # Read Image as numbers
-                        image_temp_resize = cv2.resize(
-                            image_data_temp, (self.WIDTH, self.HEIGHT)
-                        )
-
-                        self.image_data.append([image_temp_resize, class_index])
-                    except Exception as e:
-                        print(
-                            f"exception encountered while reading image: {img}. Error: {e}"
-                        )
-
-            data = np.asanyarray(self.image_data, dtype=object)
-
-            print("setting x_data and y_data for data")
-            # Iterate over the Data
-            for x in tqdm(data):
-                self.x_data.append(x[0])  # Get the X_Data
-                self.y_data.append(x[1])  # get the label
-
-            X_Data = np.asarray(self.x_data) / (
-                255.0
-            )  # type: np.typing.NDArray[np.float64]
-            Y_Data = np.asarray(self.y_data)
-
-            # reshape x_Data
-
-            X_Data = X_Data.reshape(-1, self.WIDTH, self.HEIGHT, 3)  # type: ignore
-            return X_Data, Y_Data
-        except Exception as e:
-            print(f"failed to run function process_image. exception: {e}")
-
-    def pickle_image(self):
-        """
-        :return: None Creates a Pickle Object of DataSet
-        """
-        # Call the Function and Get the Data
-        img = self.process_image()
-        if img:
-            X_Data, Y_Data = img
-
-            # Write the Entire Data into a Pickle File
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(X_Data, x_out)
-            x_out.close()
-
-            # Write the Y Label Data
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(Y_Data, y_out)
-            y_out.close()
-
-            print("Pickled Image Successfully ")
-            return X_Data, Y_Data
-
-    def load_data(self):
-        try:
-            # Read the Data from Pickle Object
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            X_Data = pickle.load(x_out)
-            x_out.close()
-
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            Y_Data = pickle.load(y_out)
-            y_out.close()
-
-            print("Reading Dataset from Pickle Object")
-            return X_Data, Y_Data
-
-        except Exception as e:
-            print(f"Could not find pickle file. exception: {e}")
-            print("Loading File and Dataset  ...")
-
-            pickled = self.pickle_image()
-            if pickled:
-                X_Data, Y_Data = pickled
-                return X_Data, Y_Data
-            else:
-                print("Unable to pickle image successfully")
-                assert False
 
 
 def reduce_size_of_dataset(
@@ -260,7 +84,8 @@ def load_data(percent_of_data: float = 0.5):
 
     # Take all datasets and reduce them by the percentagle value passed into this function
     x_train, y_train, x_test, y_test, x_cv, y_cv = reduce_size_of_dataset(
-        percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv)
+        percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv
+    )
 
     # Set train/test/cv Y data to categorical arrays, we are using categorical crossentropy loss
     num_classes = train.get_num_categories()
@@ -270,35 +95,6 @@ def load_data(percent_of_data: float = 0.5):
 
     return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
 
-
-def collect_images_and_labels_into_dataframe(
-    directory, num_dataframes, percent_of_data
-):
-    imgs = []
-    labels = []
-    for sub_dir in os.listdir(directory):
-        # list of all image names in the directory
-        image_list = os.listdir(os.path.join(directory, sub_dir))
-        # get full paths for each imag ein list
-        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))  # type: ignore
-        # add all images found to mass image list
-        imgs.extend(image_list)
-        # extend labels directory. Use label of sub directory, printed out # of images times
-        labels.extend([sub_dir] * len(image_list))
-
-    # Create pandas dataframe
-    df = pd.DataFrame({"Images": imgs, "Labels": labels})
-    df = df.sample(frac=1).reset_index(drop=True)  # To shuffle the data
-    test_size = 1.0 / num_dataframes
-    # return portions of dataframe based on the 'num_dataframes' passed in. helpful to separate test/validation data
-    if test_size == 1.0:
-        return df[: int(percent_of_data * len(imgs))], len(imgs)
-    else:
-        v1, v2 = train_test_split(df, test_size=test_size)
-        return (
-            (v1[: int(percent_of_data * len(imgs))], len(imgs)),
-            (v2[: int(percent_of_data * len(imgs))], len(imgs))
-        )
 
 
 class accuracy_stopper(tf.keras.callbacks.Callback):
@@ -357,7 +153,7 @@ def train_model(
     batch_size=32,
     learning_rate=0.001,
     force_save=False,
-    show_plot=False
+    show_plot=False,
 ):
     """
     Given the specified percent_of_data, num_epochs, batch_size and learning_rate, first create a model, then compile, build, and finally
@@ -373,7 +169,9 @@ def train_model(
     """
     try:
         # (train_gen, num_train_samples), (validation_gen,_), (test_gen,_) = load_data(percent_of_data, batch_size)
-        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
+        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(
+            percent_of_data
+        )
 
         # Start a timer to capture time to train the model
         start = time.time()
@@ -392,32 +190,49 @@ def train_model(
         # create callbacks
         acc_stop_callback = accuracy_stopper()
         # lr_scheduler = LearningRateScheduler(lambda epoch: 1e-3 * 10**(epoch / 20))
-        early_stopping = EarlyStopping(monitor='val_loss', mode='min', patience=20, verbose=1)
-        optimal_weights_path = os.path.join(RUNNING_DIR, 'models')
-        filepath = os.path.join(optimal_weights_path, 'optimal_weights_{val_acc:.0%}.keras')
-        val_acc_checkpoint = ModelCheckpoint(filepath, monitor='val_acc', mode='max', save_best_only=True, verbose=1, initial_value_threshold=0.9)
+        early_stopping = EarlyStopping(
+            monitor="val_loss", mode="min", patience=20, verbose=1
+        )
+        optimal_weights_path = os.path.join(RUNNING_DIR, "models")
+        filepath = os.path.join(
+            optimal_weights_path, "optimal_weights_{val_acc:.0%}.keras"
+        )
+        val_acc_checkpoint = ModelCheckpoint(
+            filepath,
+            monitor="val_acc",
+            mode="max",
+            save_best_only=True,
+            verbose=1,
+            initial_value_threshold=0.9,
+        )
         callback_list = [acc_stop_callback, early_stopping, val_acc_checkpoint]
 
         # Fit the model
         history = model.fit(
-            x_train, y_train,
+            x_train,
+            y_train,
             batch_size=batch_size,
             epochs=num_epochs,
             verbose=1,  # type: ignore
             validation_data=(x_cv, y_cv),
-            callbacks=callback_list
+            callbacks=callback_list,
         )
 
         end = time.time()
 
         if show_plot:
             # Plot loss & accuracy over each epoch using matplotlib and seaborn
-            df = pd.DataFrame(history.history).rename_axis('epoch').reset_index().melt(id_vars=['epoch'])
+            df = (
+                pd.DataFrame(history.history)
+                .rename_axis("epoch")
+                .reset_index()
+                .melt(id_vars=["epoch"])
+            )
             fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-            for ax, mtr in zip(axes.flat, ['loss', 'acc']):
-                ax.set_title(f'{mtr.title()} Plot')
-                dfTmp = df[df['variable'].str.contains(mtr)]
-                sns.lineplot(data=dfTmp, x='epoch', y='value', hue='variable', ax=ax)
+            for ax, mtr in zip(axes.flat, ["loss", "acc"]):
+                ax.set_title(f"{mtr.title()} Plot")
+                dfTmp = df[df["variable"].str.contains(mtr)]
+                sns.lineplot(data=dfTmp, x="epoch", y="value", hue="variable", ax=ax)
             fig.tight_layout()
             plt.show()
 
@@ -471,14 +286,14 @@ def download_data_from_kaggle():
 
 
 def download_from_google_drive(id, destination):
-    url = f'https://docs.google.com/uc?id={id}'
+    url = f"https://docs.google.com/uc?id={id}"
     gdown.download(url, destination, quiet=False)
     print()
 
 
 def unzip_data():
-    desired_dir = os.path.join(RUNNING_DIR, 'data')
-    zip_dataset_dir = os.path.join(desired_dir, f'{DATASET_NAME}.zip')
+    desired_dir = os.path.join(RUNNING_DIR, "data")
+    zip_dataset_dir = os.path.join(desired_dir, f"{DATASET_NAME}.zip")
 
     # Separate zip into separate directories in data/
     if pathlib.Path(zip_dataset_dir).exists():
@@ -490,7 +305,7 @@ def unzip_data():
 
 def parsed_unzipped_data():
     # handle previously unzipped data
-    dataset_dir = os.path.join(RUNNING_DIR, 'data', DATASET_NAME)
+    dataset_dir = os.path.join(RUNNING_DIR, "data", DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
         # Test/train
         for dir in os.listdir(dataset_dir):
@@ -499,8 +314,11 @@ def parsed_unzipped_data():
             for subdir in os.listdir(folder):
                 subdir_path = os.path.join(folder, subdir)
                 for filename in os.listdir(subdir_path):
-                    source = os.path.join(subdir_path, filename, )
-                    smaller_dir = os.path.join(RUNNING_DIR, 'data', dir)
+                    source = os.path.join(
+                        subdir_path,
+                        filename,
+                    )
+                    smaller_dir = os.path.join(RUNNING_DIR, "data", dir)
                     desired_dir = os.path.join(smaller_dir, subdir)
                     if not os.path.isdir(smaller_dir):
                         os.mkdir(smaller_dir)
@@ -517,20 +335,23 @@ TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
 
 
 def init():
-
     required_paths = [
         RUNNING_DIR,
         os.path.join(RUNNING_DIR, "logs"),
         os.path.join(RUNNING_DIR, "data"),
-        os.path.join(RUNNING_DIR, "models")
+        os.path.join(RUNNING_DIR, "models"),
     ]
     for p in required_paths:
         if not os.path.exists(p):
             os.makedirs(p)
 
     required_files = {
-        os.path.join(required_paths[3], 'optimal_weights_98%.keras'): '1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
-        os.path.join(required_paths[2], 'Combined Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
+        os.path.join(
+            required_paths[3], "optimal_weights_98%.keras"
+        ): "1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ",
+        os.path.join(
+            required_paths[2], "Combined Dataset.zip"
+        ): "1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN",
     }
 
     # Download data using the Kaggle API
@@ -574,9 +395,9 @@ def main():
             "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
         )
 
-    data_subets = [1]        # may need to downsample images before using more data
+    data_subets = [1]  # may need to downsample images before using more data
     epochs = [250]  # [25, 50, 75, 100]  # 'random' scaling numbers
-    batch_sizes = [20]          # powers of 2
+    batch_sizes = [20]  # powers of 2
     learning_rates = [0.001]
     for data_sub in data_subets:
         for epoch in epochs:

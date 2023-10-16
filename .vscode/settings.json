@@ -10,7 +10,7 @@
         "editor.defaultFormatter": "tamasfe.even-better-toml"
     },
     "flake8.args": [
-        "--max-line-length=120"
+        "--max-line-length=150"
     ],
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {

@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-RUNNING_DIR = "/tmp/alz_mri_cnn/"
+from alz_mri_cnn.utils import RUNNING_DIR
 
 
 class ImageDataset(object):
