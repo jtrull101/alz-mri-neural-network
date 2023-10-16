@@ -3,7 +3,6 @@ import logging
 import os
 import pathlib
 import pickle
-
 # import kaggle
 import shutil
 import time
@@ -15,7 +14,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
-
 # from image_dataset import ImageDataset
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -94,7 +92,6 @@ def load_data(percent_of_data: float = 0.5):
     y_cv = tf.keras.utils.to_categorical(y_cv, num_classes)
 
     return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
-
 
 
 class accuracy_stopper(tf.keras.callbacks.Callback):
