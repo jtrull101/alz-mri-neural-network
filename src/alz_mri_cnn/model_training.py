@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import pickle
+
 # import kaggle
 import shutil
 import time
@@ -14,6 +15,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+
 # from image_dataset import ImageDataset
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -22,9 +24,17 @@ from keras.models import Sequential
 from pyunpack import Archive
 
 from alz_mri_cnn.image_dataset import ImageDataset
-from alz_mri_cnn.utils import (DATA_DIR, DATASET_NAME, IMG_SIZE, LOGS_DIR,
-                               MODELS_DIR, REQUIRED_PATHS, RUNNING_DIR,
-                               TEST_DIR, TRAIN_DIR)
+from alz_mri_cnn.utils import (
+    DATA_DIR,
+    DATASET_NAME,
+    IMG_SIZE,
+    LOGS_DIR,
+    MODELS_DIR,
+    REQUIRED_PATHS,
+    RUNNING_DIR,
+    TEST_DIR,
+    TRAIN_DIR,
+)
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
@@ -58,7 +68,8 @@ def reduce_size_of_dataset(
         x_cv[test_indices],
         y_cv[test_indices],
     )
-    assert pre_reduce_samples <= x_train.shape[0]
+    post_reduce_samples = x_train.shape[0]
+    assert pre_reduce_samples >= post_reduce_samples
     return x_train, y_train, x_test, y_test, x_cv, y_cv
 
 
