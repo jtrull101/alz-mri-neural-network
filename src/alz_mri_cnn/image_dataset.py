@@ -109,7 +109,7 @@ class ImageDataset(object):
                 self.x_data.append(x[0])  # Get the X_Data
                 self.y_data.append(x[1])  # get the label
 
-            X_Data = np.asarray(self.x_data) / 255.0
+            X_Data = np.asarray(self.x_data) / 255.0  # type:  ignore
             Y_Data = np.asarray(self.y_data)
 
             # reshape x_Data

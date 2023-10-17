@@ -56,7 +56,7 @@ def get_model() -> keras.Model:
 
         best = None
         for model in found_models:
-            acc = int(model[model.find("%") - 2: model.find("%")].replace("_", ""))
+            acc = int(model[model.find("%") - 2 : model.find("%")].replace("_", ""))
             if best is None or acc > best[0]:  # type: ignore
                 best = (acc, model)
 
@@ -118,7 +118,7 @@ def on_start():
 
         # Render the image now that it is in the static dir
         index = image.rindex("/")
-        img_location = os.path.join("static", image[index + 1: len(image)])
+        img_location = os.path.join("static", image[index + 1 : len(image)])
         return render_template(
             "index.html",
             model_accuracy=model_accuracy,
@@ -162,7 +162,7 @@ def predict_image(path):
     probs = {}
     for i, x in enumerate(np.nditer(probabilities)):
         if i != max:
-            probs[CATEGORIES[i]] = f"{int(x * 100)}%"
+            probs[CATEGORIES[i]] = f"{int(x * 100)}%"  # type:  ignore
     return (get_categories()[max], int(probabilities[0][max] * 100), probs)
 
 
