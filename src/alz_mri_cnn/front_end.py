@@ -163,7 +163,9 @@ def predict_image(path):
     for i, x in enumerate(np.nditer(probabilities)):
         if i != max:
             probs[CATEGORIES[i]] = f"{int(x * 100)}%"  # type:  ignore
-    return (get_categories()[max], int(probabilities[0][max] * 100), probs)
+        else:
+            thisProb = f"{int(x * 100)}%"
+    return (get_categories()[max], thisProb, probs)
 
 
 @app.route("/predict", methods=["POST"])
