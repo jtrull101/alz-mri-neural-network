@@ -13,7 +13,7 @@ import numpy as np
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
 
-from alz_mri_cnn.utils import IMG_SIZE, RUNNING_DIR
+from alz_mri_cnn.utils import IMG_SIZE, LOGGER, RUNNING_DIR
 
 CATEGORIES = None
 
@@ -26,9 +26,9 @@ model_accuracy = None
 @app.route("/shutdown", methods=["GET"])
 def shutdown():
     global server
-    print(f" ==   run server terminate: {server}")
+    LOGGER.debug(f" ==   run server terminate: {server}")
     os.kill(server.pid, signal.SIGKILL)
-    print(f" ==   server terminated: {server}")
+    LOGGER.debug(f" ==   server terminated: {server}")
     return "Server shutting down..."
 
 
@@ -36,7 +36,8 @@ def start_local_server():
     global server
     server = Process(target=app.run)
     server.start()
-    print(f" ==   server set: {server}")
+    LOGGER.debug(f" ==   server set: {server}")
+    get_model()
     return server
 
 
@@ -56,13 +57,15 @@ def get_model() -> keras.Model:
 
         best = None
         for model in found_models:
-            acc = int(model[model.find("%") - 2: model.find("%")].replace("_", ""))
+            acc = int(model[model.find("%") - 2 : model.find("%")].replace("_", ""))
             if best is None or acc > best[0]:  # type: ignore
                 best = (acc, model)
 
         model_accuracy, model_name = best  # type: ignore
 
-        print(f"    loading model: {model_name} with accuracy: {model_accuracy}%")
+        LOGGER.debug(
+            f"    loading model: {model_name} with accuracy: {model_accuracy}%"
+        )
         model = keras.models.load_model(model_name)
     return model
 
@@ -84,7 +87,7 @@ def get_categories(categories=None):
 
 def predict_on_request(request):
     class_name = request.form.get("impairment_val")
-    print(f"    searching for random image of class_name: {class_name}")
+    LOGGER.debug(f"    searching for random image of class_name: {class_name}")
     image = get_random_image_of_class(class_name)
     prediction, confidence, all_confidence = predict_image(image)
     return image, prediction, confidence, all_confidence
@@ -111,14 +114,14 @@ def on_start():
                 try:
                     os.remove(f"static/{p}")
                 except Exception as e:
-                    print(
+                    LOGGER.debug(
                         f"encountered issue when removing image {p} from static dir: {e}"
                     )
         shutil.copy(image, "static")
 
         # Render the image now that it is in the static dir
         index = image.rindex("/")
-        img_location = os.path.join("static", image[index + 1: len(image)])
+        img_location = os.path.join("static", image[index + 1 : len(image)])
         return render_template(
             "index.html",
             model_accuracy=model_accuracy,
@@ -151,7 +154,7 @@ def predict_image(path):
     Given an image at the specified path, feed it to the best-performing model and return the (path of the image,
         class the model predicted, found probability for that predicted class).
     """
-    print(f"predict image at path:{path}")
+    LOGGER.debug(f"predict image at path:{path}")
     image = cv2.imread(path)
     image_resize = cv2.resize(image, IMG_SIZE)
     data = np.asanyarray(image_resize, dtype=float)
@@ -199,4 +202,4 @@ if __name__ == "__main__":
     # frontend must be run from src/alz_mri_cnn dir
     new_dir = os.path.dirname(os.path.abspath(__file__))
     os.chdir(new_dir)
-    print(f"cd into dir: {new_dir}")
+    LOGGER.debug(f"cd into dir: {new_dir}")

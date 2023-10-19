@@ -3,7 +3,6 @@
 # Data augmentation introduced by the ImageDataGenerator severly hurt the performance of the model
 # """
 
-
 # from sklearn.model_selection import train_test_split
 
 # def collect_images_and_labels_into_dataframe(

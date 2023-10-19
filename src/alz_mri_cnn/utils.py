@@ -1,4 +1,7 @@
+import logging
 import os
+
+LOGGER = logging.getLogger("alz_mri_cnn_logger")
 
 IMG_SIZE = (128, 128)
 # IMG_SIZE = (128//2, 128//2)

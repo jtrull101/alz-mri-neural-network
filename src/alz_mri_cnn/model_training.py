@@ -3,6 +3,7 @@ import logging
 import os
 import pathlib
 import pickle
+
 # import kaggle
 import shutil
 import time
@@ -14,6 +15,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+
 # from image_dataset import ImageDataset
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -22,15 +24,21 @@ from keras.models import Sequential
 from pyunpack import Archive
 
 from alz_mri_cnn.image_dataset import ImageDataset
-from alz_mri_cnn.utils import (DATA_DIR, DATASET_NAME, IMG_SIZE, LOGS_DIR,
-                               MODELS_DIR, REQUIRED_PATHS, RUNNING_DIR,
-                               TEST_DIR, TRAIN_DIR)
+from alz_mri_cnn.utils import (
+    DATA_DIR,
+    DATASET_NAME,
+    IMG_SIZE,
+    LOGGER,
+    LOGS_DIR,
+    MODELS_DIR,
+    REQUIRED_PATHS,
+    RUNNING_DIR,
+    TEST_DIR,
+    TRAIN_DIR,
+)
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
-
-
-LOGGER = logging.getLogger(__name__)
 
 
 def reduce_size_of_dataset(
@@ -146,7 +154,7 @@ def create_model():
     )
 
     # Print the model summary before returning
-    print(model.summary())
+    LOGGER.debug(model.summary())
     return model
 
 
@@ -170,6 +178,9 @@ def train_model(
         model.
     Failures are logged to logs/failures.log and succesful runs are logged in logs/histories.log.
     """
+    LOGGER.debug(
+        f"running train_model for params: percent_of_data={percent_of_data}, num_epochs={num_epochs}, batch_size={batch_size}, learning_rate={learning_rate}, force_save={force_save}, show_plot={show_plot}"
+    )
     try:
         # (train_gen, num_train_samples), (validation_gen,_), (test_gen,_) = load_data(percent_of_data, batch_size)
         x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
@@ -194,10 +205,8 @@ def train_model(
         early_stopping = EarlyStopping(
             monitor="val_loss", mode="min", patience=20, verbose=1
         )
-        optimal_weights_path = os.path.join(RUNNING_DIR, "models")
-        filepath = os.path.join(
-            optimal_weights_path, "optimal_weights_{val_acc:.0%}.keras"
-        )
+        model_save_path = os.path.join(RUNNING_DIR, "models")
+        filepath = os.path.join(model_save_path, "optimal_weights_{val_acc:.0%}.keras")
         val_acc_checkpoint = ModelCheckpoint(
             filepath,
             monitor="val_acc",
@@ -240,6 +249,8 @@ def train_model(
         # Evaluate the model on the test set
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
 
+        tf.saved_model.save(model, os.path.join(model_save_path, str(hash(acc))))
+
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
         acc_perc = f"{int(acc*100)}%"
@@ -255,8 +266,8 @@ def train_model(
         del history
     except Exception as ex:
         # Write failure and exception to log
-        print("logging failure...")
-        print(ex)
+        LOGGER.error("logging failure...")
+        LOGGER.error(ex)
         with open(os.path.join(LOGS_DIR, "failures.log"), "a") as f:
             f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         time.sleep(2.0)
@@ -289,8 +300,8 @@ def download_data_from_kaggle():
 
 def download_from_google_drive(id, destination):
     url = f"https://docs.google.com/uc?id={id}"
+    LOGGER.debug(f"downloading item {id} from google drive")
     gdown.download(url, destination, quiet=False)
-    print()
 
 
 def unzip_data():
@@ -298,6 +309,7 @@ def unzip_data():
 
     # Separate zip into separate directories in data/
     if pathlib.Path(zip_dataset_dir).exists():
+        LOGGER.debug(f"found zip file: {zip_dataset_dir}. unzipping...")
         Archive(zip_dataset_dir).extractall(DATA_DIR)
 
 
@@ -306,25 +318,28 @@ def parsed_unzipped_data():
     dataset_dir = os.path.join(DATA_DIR, DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
         # Test/train
-        for dir in os.listdir(dataset_dir):
-            folder = os.path.join(dataset_dir, dir)
+        for test_train_dir in os.listdir(dataset_dir):
+            folder = os.path.join(dataset_dir, test_train_dir)
             # Impairment level
             for subdir in os.listdir(folder):
                 subdir_path = os.path.join(folder, subdir)
                 for filename in os.listdir(subdir_path):
+                    smaller_dir = os.path.join(DATA_DIR, test_train_dir)
+                    desired_dir = os.path.join(smaller_dir, subdir)
+                    dirs = [smaller_dir, desired_dir]
+                    for d in dirs:
+                        if not os.path.isdir(d):
+                            os.mkdir(d)
+
                     source = os.path.join(
                         subdir_path,
                         filename,
                     )
-                    smaller_dir = os.path.join(DATA_DIR, dir)
-                    desired_dir = os.path.join(smaller_dir, subdir)
-                    if not os.path.isdir(smaller_dir):
-                        os.mkdir(smaller_dir)
-                    if not os.path.isdir(desired_dir):
-                        os.mkdir(desired_dir)
-
                     destination = os.path.join(desired_dir, filename)
                     if os.path.isfile(source):
+                        LOGGER.debug(
+                            f"copying source {source} to destination {destination}"
+                        )
                         shutil.copy(source, destination)
 
 
@@ -332,6 +347,7 @@ def init():
     for p in REQUIRED_PATHS:
         if not os.path.exists(p):
             os.makedirs(p)
+            LOGGER.debug(f"created directory: {p}")
 
     required_files = {
         os.path.join(
