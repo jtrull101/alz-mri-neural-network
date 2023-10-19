@@ -25,9 +25,7 @@
   <h3 align="center">Alzheimers MRI Scan Neural Network</h3>
 
   <p align="center">
-    Simple Convolutional Neural Network intended to diagnose fictitious MRI images, labeling new inputs as one of the following classes: 
-    <br>No Impairment, Very Mild Impairment, 
-    <br>Mild Impairment, Moderate Impairment
+    Simple Convolutional Neural Network intended to diagnose fictitious MRI images, labeling new inputs with an estimated Impairment level ranging from No Impairment to Moderate Impairment.
     <br>
     · <a href="https://github.com/othneildrew/Best-README-Template/issues">Report Bug</a>
     · <a href="https://github.com/othneildrew/Best-README-Template/issues">Request Feature</a>
@@ -72,26 +70,27 @@ My hope is that this project will serve as a beacon of hope for others facing Al
 
 Below are the major Python frameworks used for this project
 
-* [Tensorflow](https://www.tensorflow.org/)
-* [Keras](https://keras.io/)
-* [Flask](https://flask.palletsprojects.com/en/3.0.x/)
+<ul>
+  <li>[Tensorflow](https://www.tensorflow.org/)</li>
+  <li>[Keras](https://keras.io/)</li>
+  <li>[Flask](https://flask.palletsprojects.com/en/3.0.x/)</li>
+</ul>
   
-
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Getting Started
 Installing this software is as simple as the few steps below:
 
-First, pull this git repo to a local directory and cd into that directory.
-
-Next, upgrade pip:
-
-    python -m pip install --upgrade pip
+<ol>
+  <li>First, pull this git repo to a local directory and cd into that directory</li>
+  <li>Next, upgrade pip:
     
-Then pip install the included requirements.txt file.
+    python -m pip install --upgrade pip
+  <li>Then pip install the included requirements.txt file</li>
 
     pip install -r requirements.txt
-
+    
+</ol>
   Now you are ready to run tests or the front-end application.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -114,10 +113,13 @@ Starting the Web User Interface (UI):
   <p>
   The utility will return a prediction for the diagnosis, categorizing it into one of four levels of impairment:
   </p>
-  <ul>No Impairment</ul>  
-  <ul>Very Mild Impairment</ul>
-  <ul>Mild Impairment</ul>  
-  <ul>Moderate Impairment</ul>  
+  <ul>
+    <li>No Impairment</li>  
+    <li>Very Mild Impairment</li>
+    <li>Mild Impairment</li>  
+    <li>Moderate Impairment</li>  
+  </ul>
+  
   <br>
   Using the Web UI:
   <br>
