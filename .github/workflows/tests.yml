@@ -9,7 +9,7 @@ on:
   pull_request:
   schedule:
     # Runs every day at 8 AM
-    - cron: '0 8 * * *'
+    - cron: '0 8 */2 * *'
 
 jobs:
   testing:
