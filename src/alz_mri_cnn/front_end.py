@@ -107,7 +107,7 @@ def on_start():
     elif request.method == "GET":
         return render_template("index.html")
 
-    # Clear out the static dir of all previous entries (jpgs)
+    # Clear out the static dir of all previous entries (jpg)
     if image:
         for p in os.listdir("static"):
             if ".jpg" in p:
@@ -162,13 +162,13 @@ def predict_image(path):
     x_data_reshape = np.reshape(x_data, (-1, IMG_SIZE[0], IMG_SIZE[1], 3))
     probabilities = get_model().predict(x_data_reshape)
     max = np.argmax(probabilities)
-    probs = {}
+    confidences = {}
     for i, x in enumerate(np.nditer(probabilities)):
         if i != max:
-            probs[CATEGORIES[i]] = f"{int(x * 100)}%"  # type:  ignore
+            confidences[CATEGORIES[i]] = f"{int(x * 100)}%"  # type:  ignore
         else:
             thisProb = f"{int(x * 100)}%"
-    return (get_categories()[max], thisProb, probs)
+    return (get_categories()[max], thisProb, confidences)
 
 
 @app.route("/predict", methods=["POST"])

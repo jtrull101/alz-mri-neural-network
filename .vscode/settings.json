@@ -17,6 +17,15 @@
         "source.organizeImports": true
     },
     "python.linting.enabled": true,
+    "cSpell.words": [
+        "arange",
+        "figsize",
+        "lineplot",
+        "nparrays",
+        "relu",
+        "uywb",
+        "Xlah"
+    ],
 
     
 }

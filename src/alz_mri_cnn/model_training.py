@@ -8,6 +8,7 @@ import pickle
 import shutil
 import time
 from datetime import datetime
+from zipfile import ZipFile
 
 import gdown
 import matplotlib.pyplot as plt
@@ -46,14 +47,14 @@ def reduce_size_of_dataset(
 ):
     """
     Return reduced versions of the x_train, y_train, x_test, y_test, x_cv and y_cv nparrays. The amount that each array will be reduced is
-        represented by the precent_of_data float. An input of 0.5 will yield 50% of the initial dataset size. Assert the dataset is reduced by
+        represented by the percent_of_data float. An input of 0.5 will yield 50% of the initial dataset size. Assert the dataset is reduced by
         checking the size of x_train before and after.
     """
     # Shuffle indices used for training data reduction
     train_indices = np.arange(int(percent_of_data * x_train.shape[0]))
     np.random.shuffle(train_indices)
 
-    # Suffle indices used for test and validation data reduction
+    # Shuffle indices used for test and validation data reduction
     test_indices = np.arange(int(percent_of_data * x_test.shape[0]))
     np.random.shuffle(test_indices)
 
@@ -94,7 +95,7 @@ def load_data(percent_of_data: float = 0.5):
     x_cv, x_test = np.array_split(x_test, 2)
     y_cv, y_test = np.array_split(y_test, 2)
 
-    # Take all datasets and reduce them by the percentagle value passed into this function
+    # Take all datasets and reduce them by the percentage value passed into this function
     x_train, y_train, x_test, y_test, x_cv, y_cv = reduce_size_of_dataset(
         percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv
     )
@@ -171,12 +172,12 @@ def train_model(
         fit the model. The model will be fit and testing using the specified percentage of the whole data subset. Each model is compiled the
         same way, with categorical_crossentropy loss and an Adam optimizer with a configurable learning_rate. After building, the model is fit
         against the training data while validated against the cross validation set. After each epoch the hyper parameters of the model are updated
-        in tensorflow in correlation with the result of the loss function assesed against the cross validation set. A callback is included to prevent
+        in tensorflow in correlation with the result of the loss function assessed against the cross validation set. A callback is included to prevent
         the model from overfitting, stopping the training if our accuracy against the training set exceeds 99.5%.
     At the end of num_epochs, the model is assessed against the percentage subset of the test set. The final loss and accuracy that result from this predict()
         call are used to assess the model in it's trained state. Models with higher than 95% accuracy are saved for consideration as a future best-performing
         model.
-    Failures are logged to logs/failures.log and succesful runs are logged in logs/histories.log.
+    Failures are logged to logs/failures.log and successful runs are logged in logs/histories.log.
     """
     LOGGER.debug(
         f"running train_model for params: percent_of_data={percent_of_data}, num_epochs={num_epochs}, batch_size={batch_size}, learning_rate={learning_rate}, force_save={force_save}, show_plot={show_plot}"
@@ -205,17 +206,18 @@ def train_model(
         early_stopping = EarlyStopping(
             monitor="val_loss", mode="min", patience=20, verbose=1
         )
-        model_save_path = os.path.join(RUNNING_DIR, "models")
-        filepath = os.path.join(model_save_path, "optimal_weights_{val_acc:.0%}.keras")
-        val_acc_checkpoint = ModelCheckpoint(
-            filepath,
-            monitor="val_acc",
-            mode="max",
-            save_best_only=True,
-            verbose=1,
-            initial_value_threshold=0.9,
-        )
-        callback_list = [acc_stop_callback, early_stopping, val_acc_checkpoint]
+        running_dir_models = os.path.join(RUNNING_DIR, "models")
+        # filepath = os.path.join(model_save_path, "optimal_weights_{val_acc:.0%}.keras")
+        # val_acc_checkpoint = ModelCheckpoint(
+        #     filepath,
+        #     monitor="val_acc",
+        #     mode="max",
+        #     save_best_only=True,
+        #     verbose=1,
+        #     initial_value_threshold=0.95,
+        # )
+        callback_list = [acc_stop_callback, early_stopping]
+        # callback_list = [acc_stop_callback, early_stopping, val_acc_checkpoint, lr_scheduler]
 
         # Fit the model
         history = model.fit(
@@ -230,40 +232,46 @@ def train_model(
 
         end = time.time()
 
-        if show_plot:
-            # Plot loss & accuracy over each epoch using matplotlib and seaborn
-            df = (
-                pd.DataFrame(history.history)
-                .rename_axis("epoch")
-                .reset_index()
-                .melt(id_vars=["epoch"])
-            )
-            fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-            for ax, mtr in zip(axes.flat, ["loss", "acc"]):
-                ax.set_title(f"{mtr.title()} Plot")
-                dfTmp = df[df["variable"].str.contains(mtr)]
-                sns.lineplot(data=dfTmp, x="epoch", y="value", hue="variable", ax=ax)
-            fig.tight_layout()
-            plt.show()
-
         # Evaluate the model on the test set
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
+        new_model_dir = os.path.join(running_dir_models, "model")
+        os.makedirs(new_model_dir)
 
-        tf.saved_model.save(model, os.path.join(model_save_path, str(hash(acc))))
+        # Save the tensorflow model, create a zip, then delete the directory
+        tf.saved_model.save(model, new_model_dir)
+        key = time.strftime("%H_%M_%S_%d_%m_%Y")
+        shutil.make_archive(
+            os.path.join(running_dir_models, f"saved_model-{key}"),
+            "zip",
+            new_model_dir,
+        )
+        shutil.rmtree(new_model_dir)
+
+        # Plot loss & accuracy over each epoch using matplotlib and seaborn
+        createSeabornPlot(show_plot, history, running_dir_models, key)
+
+        # Create properties file
+        with open(
+            os.path.join(running_dir_models, f"model-{key}.properties"), "w"
+        ) as f:
+            f.write(f"loss: {loss:0.2f}\n")
+            f.write(f"accuracy: {acc:0.2f}\n")
 
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
-        acc_perc = f"{int(acc*100)}%"
-        data_perc = f"{int(percent_of_data*100)}%"
+        acc_percent = f"{int(acc*100)}%"
+        data_percent = f"{int(percent_of_data*100)}%"
 
         # Add a log to the histories.log. This is in csv format in case we want to parse this programmatically later
-        out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
+        out = f"{acc_percent}, {data_percent}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
 
         if force_save or acc >= 0.5:
             with open(os.path.join(LOGS_DIR, "histories.log"), "a") as f:
                 f.write(out)
+
         # Delete the history object for garbage collection
         del history
+
     except Exception as ex:
         # Write failure and exception to log
         LOGGER.error("logging failure...")
@@ -271,14 +279,36 @@ def train_model(
         with open(os.path.join(LOGS_DIR, "failures.log"), "a") as f:
             f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         time.sleep(2.0)
-        return False
+        return
     finally:
         # Garbage collection, delete model, clear keras backend and gc.collect()
         if model:
             del model
         K.clear_session()
         gc.collect()
-    return True
+
+    return acc
+
+
+def createSeabornPlot(show_plot, history, saved_model_dir, key):
+    df = (
+        pd.DataFrame(history.history)
+        .rename_axis("epoch")
+        .reset_index()
+        .melt(id_vars=["epoch"])
+    )
+    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+    for ax, mtr in zip(axes.flat, ["loss", "acc"]):
+        ax.set_title(f"{mtr.title()} Plot")
+        dfTmp = df[df["variable"].str.contains(mtr)]
+        plot = sns.lineplot(data=dfTmp, x="epoch", y="value", hue="variable", ax=ax)
+        figure = plot.get_figure()
+        # print the plot out to the drive
+        figure.savefig(os.path.join(saved_model_dir, f"seaborn_plot-{key}.png"))
+    fig.tight_layout()
+
+    if show_plot:
+        plt.show()
 
 
 def download_data_from_kaggle():
@@ -398,19 +428,29 @@ def main():
             "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
         )
 
-    data_subets = [1]  # may need to downsample images before using more data
+    data_subsets = [1]  # may need to downsample images before using more data
     epochs = [250]  # [25, 50, 75, 100]  # 'random' scaling numbers
     batch_sizes = [32]  # powers of 2
     learning_rates = [0.001]
-    for data_sub in data_subets:
-        for epoch in epochs:
-            for batch in batch_sizes:
-                for learn_rate in learning_rates:
-                    # Train the model over many iterations of the following:
-                    #   percentage of data, number of epochs, batch size, and learning rates
-                    result = train_model(
-                        data_sub, epoch, batch, learn_rate, show_plot=True
-                    )
+    iters = 10
+    for _ in range(iters):
+        for data_sub in data_subsets:
+            for epoch in epochs:
+                for batch in batch_sizes:
+                    for learn_rate in learning_rates:
+                        # Train the model over many iterations of the following:
+                        #   percentage of data, number of epochs, batch size, and learning rates
+                        result = train_model(
+                            # data_sub, epoch, batch, learn_rate, show_plot=True
+                            data_sub,
+                            epoch,
+                            batch,
+                            learn_rate,
+                            show_plot=False,
+                        )
+                        if result > 0.99:
+                            print("found model with 99% accuracy!")
+                            return
     return result
 
 

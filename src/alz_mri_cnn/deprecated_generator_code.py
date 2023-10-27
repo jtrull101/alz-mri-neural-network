@@ -1,6 +1,6 @@
 # """
-# Deprecated code - still intereseting enough to keep
-# Data augmentation introduced by the ImageDataGenerator severly hurt the performance of the model
+# Deprecated code - still interesting enough to keep
+# Data augmentation introduced by the ImageDataGenerator severely hurt the performance of the model
 # """
 
 # from sklearn.model_selection import train_test_split
