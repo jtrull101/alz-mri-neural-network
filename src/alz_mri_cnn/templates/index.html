@@ -16,24 +16,28 @@
         </font>
     </body>
     <br>
-    <br>
-    <br>
-    <!-- <div class="loader"></div> -->
-    <body>
-        <font size="-3">
-            Result: {{ result }}
-        </font>
-    </body>
-    <br>
-    <body>
-        <font size="-3">
-            Confidence: {{ confidence }}%
-        </font>
-    </body>
-    <br>
-    <body>
-        <img src="{{ image }}">
-
-    </body>
+    <div id="results">
+        <body>
+            <font size="-3">
+                Result: {{ result }}
+            </font>
+        </body>
+        <br>
+        <body>
+            <font size="-3">
+                Confidence: {{ confidence }}
+            </font>
+        </body>
+        <br>
+        <body>
+            <font size="-3">
+                Confidences per class: {{ all_confidence }}
+            </font>
+        </body>
+        <br>
+        <body>
+            <img src="{{ image }}">
+        </body>
+    </div>
 </html>
 

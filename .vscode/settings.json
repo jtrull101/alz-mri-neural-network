@@ -10,13 +10,22 @@
         "editor.defaultFormatter": "tamasfe.even-better-toml"
     },
     "flake8.args": [
-        "--max-line-length=120"
+        "--max-line-length=150"
     ],
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": true
     },
     "python.linting.enabled": true,
+    "cSpell.words": [
+        "arange",
+        "figsize",
+        "lineplot",
+        "nparrays",
+        "relu",
+        "uywb",
+        "Xlah"
+    ],
 
     
 }

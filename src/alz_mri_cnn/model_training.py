@@ -3,210 +3,43 @@ import logging
 import os
 import pathlib
 import pickle
+
 # import kaggle
 import shutil
 import time
 from datetime import datetime
-from typing import Tuple
+from zipfile import ZipFile
 
-import cv2
 import gdown
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import tensorflow as tf
+
 # from image_dataset import ImageDataset
 from keras import backend as K
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from keras.models import Sequential
-from PIL import Image
 from pyunpack import Archive
-from sklearn.model_selection import train_test_split
-from tqdm import tqdm
+
+from alz_mri_cnn.image_dataset import ImageDataset
+from alz_mri_cnn.utils import (
+    DATA_DIR,
+    DATASET_NAME,
+    IMG_SIZE,
+    LOGGER,
+    LOGS_DIR,
+    MODELS_DIR,
+    REQUIRED_PATHS,
+    RUNNING_DIR,
+    TEST_DIR,
+    TRAIN_DIR,
+)
 
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 tf.autograph.set_verbosity(2)
-
-
-IMG_SIZE = (128, 128)
-# IMG_SIZE = (128//2, 128//2)
-RUNNING_DIR = "/tmp/alz_mri_cnn/"
-
-# DATASET_NAME = "Alzheimer_s Dataset"
-DATASET_NAME = "Combined Dataset"
-
-LOGGER = logging.getLogger(__name__)
-
-
-class ImageDataset(object):
-    def __init__(self, PATH="", TRAIN=False):
-        self.PATH = PATH
-        self.TRAIN = TRAIN
-        self.NUM_CATEGORIES = 0
-        self.WIDTH, self.HEIGHT = None, None
-
-        (
-            self.image_data,
-            self.x_data,
-            self.y_data,
-            self.CATEGORIES,
-            self.list_categories,
-        ) = ([], [], [], [], [])
-
-    def get_num_categories(self) -> int:
-        """
-        Return the number of categories found in the directory associated with this image dataset
-        """
-        if self.NUM_CATEGORIES == 0:
-            self.get_categories()
-        return self.NUM_CATEGORIES
-
-    def get_width_height_from_imgs_in_path(self, path):
-        """
-        Get the first image in path and return the size associated
-        """
-        for img in os.listdir(path):
-            new_path = os.path.join(path, img)
-            return Image.open(new_path).size
-        print(f"ERROR: Unable to find any image in path! path={path}")
-        assert False
-
-    def get_image_dimensions(self) -> Tuple[int, int]:
-        """
-        Get the WIDTH and HEIGHT associated with the images in this image dataset. Note this is using an assumption that
-            all images will be of the same size. Could use a tensorflow generator to force a consistent size
-        """
-        if self.WIDTH and self.HEIGHT:
-            return self.WIDTH, self.HEIGHT
-
-        while not self.WIDTH or not self.HEIGHT:
-            self.CATEGORIES = self.get_categories()
-            for c in self.CATEGORIES:
-                self.WIDTH, self.HEIGHT = self.get_width_height_from_imgs_in_path(
-                    os.path.join(self.PATH, c)
-                )
-                if self.WIDTH and self.HEIGHT:
-                    break
-
-        return self.WIDTH, self.HEIGHT
-
-    def get_categories(self):
-        """
-        Get all categories that can be found associated with this image dataset. Note that categories will be subdirectories in this dataset
-        """
-        for path in os.listdir(self.PATH):
-            if path not in self.list_categories:
-                self.list_categories.append(path)
-        print("Found Categories ", self.list_categories, "\n")
-        self.NUM_CATEGORIES = len(self.list_categories)
-        return self.list_categories
-
-    def process_image(self):
-        try:
-            """
-            Return Numpy array of image
-            :return: X_Data, Y_Data
-            """
-            self.CATEGORIES = self.get_categories()
-            for c in tqdm(self.CATEGORIES):  # Iterate over categories
-                print(f"processing category:{c}")
-                folder_path = os.path.join(self.PATH, c)  # Folder Path
-                class_index = self.CATEGORIES.index(
-                    c
-                )  # this will get index for classification
-
-                for img in tqdm(os.listdir(folder_path)):
-                    new_path = os.path.join(folder_path, img)  # image Path
-                    self.WIDTH, self.HEIGHT = Image.open(new_path).size
-                    try:  # if any image is corrupted
-                        image_data_temp = cv2.imread(new_path)  # Read Image as numbers
-                        image_temp_resize = cv2.resize(
-                            image_data_temp, (self.WIDTH, self.HEIGHT)
-                        )
-
-                        self.image_data.append([image_temp_resize, class_index])
-                    except Exception as e:
-                        print(
-                            f"exception encountered while reading image: {img}. Error: {e}"
-                        )
-
-            data = np.asanyarray(self.image_data, dtype=object)
-
-            print("setting x_data and y_data for data")
-            # Iterate over the Data
-            for x in tqdm(data):
-                self.x_data.append(x[0])  # Get the X_Data
-                self.y_data.append(x[1])  # get the label
-
-            X_Data = np.asarray(self.x_data) / (
-                255.0
-            )  # type: np.typing.NDArray[np.float64]
-            Y_Data = np.asarray(self.y_data)
-
-            # reshape x_Data
-
-            X_Data = X_Data.reshape(-1, self.WIDTH, self.HEIGHT, 3)  # type: ignore
-            return X_Data, Y_Data
-        except Exception as e:
-            print(f"failed to run function process_image. exception: {e}")
-
-    def pickle_image(self):
-        """
-        :return: None Creates a Pickle Object of DataSet
-        """
-        # Call the Function and Get the Data
-        img = self.process_image()
-        if img:
-            X_Data, Y_Data = img
-
-            # Write the Entire Data into a Pickle File
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(X_Data, x_out)
-            x_out.close()
-
-            # Write the Y Label Data
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "wb"
-            )
-            pickle.dump(Y_Data, y_out)
-            y_out.close()
-
-            print("Pickled Image Successfully ")
-            return X_Data, Y_Data
-
-    def load_data(self):
-        try:
-            # Read the Data from Pickle Object
-            x_out = open(
-                f'{RUNNING_DIR}data/X_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            X_Data = pickle.load(x_out)
-            x_out.close()
-
-            y_out = open(
-                f'{RUNNING_DIR}data/Y_Data_{"train" if self.TRAIN else "test"}', "rb"
-            )
-            Y_Data = pickle.load(y_out)
-            y_out.close()
-
-            print("Reading Dataset from Pickle Object")
-            return X_Data, Y_Data
-
-        except Exception as e:
-            print(f"Could not find pickle file. exception: {e}")
-            print("Loading File and Dataset  ...")
-
-            pickled = self.pickle_image()
-            if pickled:
-                X_Data, Y_Data = pickled
-                return X_Data, Y_Data
-            else:
-                print("Unable to pickle image successfully")
-                assert False
 
 
 def reduce_size_of_dataset(
@@ -214,14 +47,14 @@ def reduce_size_of_dataset(
 ):
     """
     Return reduced versions of the x_train, y_train, x_test, y_test, x_cv and y_cv nparrays. The amount that each array will be reduced is
-        represented by the precent_of_data float. An input of 0.5 will yield 50% of the initial dataset size. Assert the dataset is reduced by
+        represented by the percent_of_data float. An input of 0.5 will yield 50% of the initial dataset size. Assert the dataset is reduced by
         checking the size of x_train before and after.
     """
     # Shuffle indices used for training data reduction
     train_indices = np.arange(int(percent_of_data * x_train.shape[0]))
     np.random.shuffle(train_indices)
 
-    # Suffle indices used for test and validation data reduction
+    # Shuffle indices used for test and validation data reduction
     test_indices = np.arange(int(percent_of_data * x_test.shape[0]))
     np.random.shuffle(test_indices)
 
@@ -234,16 +67,26 @@ def reduce_size_of_dataset(
         x_cv[test_indices],
         y_cv[test_indices],
     )
-    assert pre_reduce_samples >= x_train.shape[0]
+    post_reduce_samples = x_train.shape[0]
+    assert pre_reduce_samples >= post_reduce_samples
     return x_train, y_train, x_test, y_test, x_cv, y_cv
 
 
 def load_data(percent_of_data: float = 0.5):
     # Create ImageDataset objects
-    PATH = f"{RUNNING_DIR}/data/"
 
-    train = ImageDataset(PATH=f"{PATH}/Combined Dataset/train", TRAIN=True)
-    test = ImageDataset(PATH=f"{PATH}/Combined Dataset/test", TRAIN=False)
+    train = ImageDataset(
+        PATH=os.path.join(DATA_DIR, "Combined Dataset", "train"), TRAIN=True
+    )
+    test = ImageDataset(
+        PATH=os.path.join(DATA_DIR, "Combined Dataset", "test"), TRAIN=False
+    )
+    categories = train.get_categories()
+    test_categories = test.get_categories()
+    assert categories == test_categories
+    # write out category file
+    with open(os.path.join(DATA_DIR, "categories"), "wb") as f:
+        pickle.dump(categories, f)
 
     # Load dataset
     x_train, y_train = train.load_data()
@@ -252,9 +95,10 @@ def load_data(percent_of_data: float = 0.5):
     x_cv, x_test = np.array_split(x_test, 2)
     y_cv, y_test = np.array_split(y_test, 2)
 
-    # Take all datasets and reduce them by the percentagle value passed into this function
+    # Take all datasets and reduce them by the percentage value passed into this function
     x_train, y_train, x_test, y_test, x_cv, y_cv = reduce_size_of_dataset(
-        percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv)
+        percent_of_data, x_train, y_train, x_test, y_test, x_cv, y_cv
+    )
 
     # Set train/test/cv Y data to categorical arrays, we are using categorical crossentropy loss
     num_classes = train.get_num_categories()
@@ -262,37 +106,7 @@ def load_data(percent_of_data: float = 0.5):
     y_test = tf.keras.utils.to_categorical(y_test, num_classes)
     y_cv = tf.keras.utils.to_categorical(y_cv, num_classes)
 
-    return num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv
-
-
-def collect_images_and_labels_into_dataframe(
-    directory, num_dataframes, percent_of_data
-):
-    imgs = []
-    labels = []
-    for sub_dir in os.listdir(directory):
-        # list of all image names in the directory
-        image_list = os.listdir(os.path.join(directory, sub_dir))
-        # get full paths for each imag ein list
-        image_list = list(map(lambda x: os.path.join(sub_dir, x), image_list))  # type: ignore
-        # add all images found to mass image list
-        imgs.extend(image_list)
-        # extend labels directory. Use label of sub directory, printed out # of images times
-        labels.extend([sub_dir] * len(image_list))
-
-    # Create pandas dataframe
-    df = pd.DataFrame({"Images": imgs, "Labels": labels})
-    df = df.sample(frac=1).reset_index(drop=True)  # To shuffle the data
-    test_size = 1.0 / num_dataframes
-    # return portions of dataframe based on the 'num_dataframes' passed in. helpful to separate test/validation data
-    if test_size == 1.0:
-        return df[: int(percent_of_data * len(imgs))], len(imgs)
-    else:
-        v1, v2 = train_test_split(df, test_size=test_size)
-        return (
-            (v1[: int(percent_of_data * len(imgs))], len(imgs)),
-            (v2[: int(percent_of_data * len(imgs))], len(imgs))
-        )
+    return x_train, y_train, x_test, y_test, x_cv, y_cv
 
 
 class accuracy_stopper(tf.keras.callbacks.Callback):
@@ -341,7 +155,7 @@ def create_model():
     )
 
     # Print the model summary before returning
-    print(model.summary())
+    LOGGER.debug(model.summary())
     return model
 
 
@@ -351,23 +165,26 @@ def train_model(
     batch_size=32,
     learning_rate=0.001,
     force_save=False,
-    show_plot=False
+    show_plot=False,
 ):
     """
     Given the specified percent_of_data, num_epochs, batch_size and learning_rate, first create a model, then compile, build, and finally
         fit the model. The model will be fit and testing using the specified percentage of the whole data subset. Each model is compiled the
         same way, with categorical_crossentropy loss and an Adam optimizer with a configurable learning_rate. After building, the model is fit
         against the training data while validated against the cross validation set. After each epoch the hyper parameters of the model are updated
-        in tensorflow in correlation with the result of the loss function assesed against the cross validation set. A callback is included to prevent
+        in tensorflow in correlation with the result of the loss function assessed against the cross validation set. A callback is included to prevent
         the model from overfitting, stopping the training if our accuracy against the training set exceeds 99.5%.
     At the end of num_epochs, the model is assessed against the percentage subset of the test set. The final loss and accuracy that result from this predict()
         call are used to assess the model in it's trained state. Models with higher than 95% accuracy are saved for consideration as a future best-performing
         model.
-    Failures are logged to logs/failures.log and succesful runs are logged in logs/histories.log.
+    Failures are logged to logs/failures.log and successful runs are logged in logs/histories.log.
     """
+    LOGGER.debug(
+        f"running train_model for params: percent_of_data={percent_of_data}, num_epochs={num_epochs}, batch_size={batch_size}, learning_rate={learning_rate}, force_save={force_save}, show_plot={show_plot}"
+    )
     try:
         # (train_gen, num_train_samples), (validation_gen,_), (test_gen,_) = load_data(percent_of_data, batch_size)
-        num_classes, x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
+        x_train, y_train, x_test, y_test, x_cv, y_cv = load_data(percent_of_data)
 
         # Start a timer to capture time to train the model
         start = time.time()
@@ -383,72 +200,115 @@ def train_model(
         )
         model.build()
 
-        callbacks = accuracy_stopper()
+        # create callbacks
+        acc_stop_callback = accuracy_stopper()
         # lr_scheduler = LearningRateScheduler(lambda epoch: 1e-3 * 10**(epoch / 20))
-        early_stopping = EarlyStopping(monitor='val_loss', mode='min', patience=20, verbose=1)
-        optimal_weights_path = os.path.join(RUNNING_DIR, 'models')
-        filepath = os.path.join(optimal_weights_path, 'optimal_weights_{val_acc:.0%}.keras')
-        val_acc_checkpoint = ModelCheckpoint(filepath, monitor='val_acc', mode='max', save_best_only=True, verbose=1, initial_value_threshold=0.9)
-        callback_list = [callbacks, early_stopping, val_acc_checkpoint]
+        early_stopping = EarlyStopping(
+            monitor="val_loss", mode="min", patience=20, verbose=1
+        )
+        running_dir_models = os.path.join(RUNNING_DIR, "models")
+        # filepath = os.path.join(model_save_path, "optimal_weights_{val_acc:.0%}.keras")
+        # val_acc_checkpoint = ModelCheckpoint(
+        #     filepath,
+        #     monitor="val_acc",
+        #     mode="max",
+        #     save_best_only=True,
+        #     verbose=1,
+        #     initial_value_threshold=0.95,
+        # )
+        callback_list = [acc_stop_callback, early_stopping]
+        # callback_list = [acc_stop_callback, early_stopping, val_acc_checkpoint, lr_scheduler]
+
         # Fit the model
         history = model.fit(
-            x_train, y_train,
+            x_train,
+            y_train,
             batch_size=batch_size,
             epochs=num_epochs,
             verbose=1,  # type: ignore
             validation_data=(x_cv, y_cv),
-            callbacks=callback_list
+            callbacks=callback_list,
         )
 
         end = time.time()
 
-        if show_plot:
-            # Plot loss & accuracy over each epoch using matplotlib and seaborn
-            df = pd.DataFrame(history.history).rename_axis('epoch').reset_index().melt(id_vars=['epoch'])
-            fig, axes = plt.subplots(1, 2, figsize=(18, 6))
-            for ax, mtr in zip(axes.flat, ['loss', 'acc']):
-                ax.set_title(f'{mtr.title()} Plot')
-                dfTmp = df[df['variable'].str.contains(mtr)]
-                sns.lineplot(data=dfTmp, x='epoch', y='value', hue='variable', ax=ax)
-            fig.tight_layout()
-            plt.show()
-
         # Evaluate the model on the test set
         loss, acc = model.evaluate(x_test, y_test, verbose=0)
+        new_model_dir = os.path.join(running_dir_models, "model")
+        os.makedirs(new_model_dir)
+
+        # Save the tensorflow model, create a zip, then delete the directory
+        tf.saved_model.save(model, new_model_dir)
+        key = time.strftime("%H_%M_%S_%d_%m_%Y")
+        shutil.make_archive(
+            os.path.join(running_dir_models, f"saved_model-{key}"),
+            "zip",
+            new_model_dir,
+        )
+        shutil.rmtree(new_model_dir)
+
+        # Plot loss & accuracy over each epoch using matplotlib and seaborn
+        createSeabornPlot(show_plot, history, running_dir_models, key)
+
+        # Create properties file
+        with open(
+            os.path.join(running_dir_models, f"model-{key}.properties"), "w"
+        ) as f:
+            f.write(f"loss: {loss:0.2f}\n")
+            f.write(f"accuracy: {acc:0.2f}\n")
+
         # Get elapsed time from this training, accuracy on test set, and pretty print of percentage of data
         elapsed_time = f"{(end-start):.0f}"
-        acc_perc = f"{int(acc*100)}%"
-        data_perc = f"{int(percent_of_data*100)}%"
+        acc_percent = f"{int(acc*100)}%"
+        data_percent = f"{int(percent_of_data*100)}%"
 
         # Add a log to the histories.log. This is in csv format in case we want to parse this programmatically later
-        out = f"{acc_perc}, {data_perc}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
+        out = f"{acc_percent}, {data_percent}, {batch_size}, {learning_rate}, {history.params}, {history.history['acc']}, {history.history['loss']}, {elapsed_time}\n"
 
         if force_save or acc >= 0.5:
-            # Save the model only if accuracy is over 98%
-            if force_save or acc >= 0.98:
-                name = f"alz_cnn_{acc_perc}_acc_{num_epochs}_es_{batch_size}_bs_{learning_rate}_lr_{data_perc}_data_{loss:.2f}_loss_{elapsed_time}_seconds.keras"
-                model.save(os.path.join(RUNNING_DIR, "models", name), "a")
-            f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
-            f.write(out)
-            f.close()
+            with open(os.path.join(LOGS_DIR, "histories.log"), "a") as f:
+                f.write(out)
+
         # Delete the history object for garbage collection
         del history
+
     except Exception as ex:
         # Write failure and exception to log
-        print("logging failure...")
-        print(ex)
-        f = open(os.path.join(RUNNING_DIR, "logs", "failures.log"), "a")
-        f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
-        f.close()
+        LOGGER.error("logging failure...")
+        LOGGER.error(ex)
+        with open(os.path.join(LOGS_DIR, "failures.log"), "a") as f:
+            f.write(f"{(percent_of_data,batch_size,num_epochs)}, {ex}\n")
         time.sleep(2.0)
-        return False
+        return
     finally:
         # Garbage collection, delete model, clear keras backend and gc.collect()
         if model:
             del model
         K.clear_session()
         gc.collect()
-    return True
+
+    return acc
+
+
+def createSeabornPlot(show_plot, history, saved_model_dir, key):
+    df = (
+        pd.DataFrame(history.history)
+        .rename_axis("epoch")
+        .reset_index()
+        .melt(id_vars=["epoch"])
+    )
+    fig, axes = plt.subplots(1, 2, figsize=(18, 6))
+    for ax, mtr in zip(axes.flat, ["loss", "acc"]):
+        ax.set_title(f"{mtr.title()} Plot")
+        dfTmp = df[df["variable"].str.contains(mtr)]
+        plot = sns.lineplot(data=dfTmp, x="epoch", y="value", hue="variable", ax=ax)
+        figure = plot.get_figure()
+        # print the plot out to the drive
+        figure.savefig(os.path.join(saved_model_dir, f"seaborn_plot-{key}.png"))
+    fig.tight_layout()
+
+    if show_plot:
+        plt.show()
 
 
 def download_data_from_kaggle():
@@ -469,66 +329,63 @@ def download_data_from_kaggle():
 
 
 def download_from_google_drive(id, destination):
-    url = f'https://docs.google.com/uc?id={id}'
+    url = f"https://docs.google.com/uc?id={id}"
+    LOGGER.debug(f"downloading item {id} from google drive")
     gdown.download(url, destination, quiet=False)
-    print()
 
 
 def unzip_data():
-    desired_dir = os.path.join(RUNNING_DIR, 'data')
-    zip_dataset_dir = os.path.join(desired_dir, f'{DATASET_NAME}.zip')
+    zip_dataset_dir = os.path.join(DATA_DIR, f"{DATASET_NAME}.zip")
 
     # Separate zip into separate directories in data/
     if pathlib.Path(zip_dataset_dir).exists():
-        if not pathlib.Path(desired_dir).exists():
-            os.makedirs(desired_dir)
-
-        Archive(zip_dataset_dir).extractall(desired_dir)
+        LOGGER.debug(f"found zip file: {zip_dataset_dir}. unzipping...")
+        Archive(zip_dataset_dir).extractall(DATA_DIR)
 
 
 def parsed_unzipped_data():
     # handle previously unzipped data
-    dataset_dir = os.path.join(RUNNING_DIR, 'data', DATASET_NAME)
+    dataset_dir = os.path.join(DATA_DIR, DATASET_NAME)
     if pathlib.Path(dataset_dir).exists():
         # Test/train
-        for dir in os.listdir(dataset_dir):
-            folder = os.path.join(dataset_dir, dir)
+        for test_train_dir in os.listdir(dataset_dir):
+            folder = os.path.join(dataset_dir, test_train_dir)
             # Impairment level
             for subdir in os.listdir(folder):
                 subdir_path = os.path.join(folder, subdir)
                 for filename in os.listdir(subdir_path):
-                    source = os.path.join(subdir_path, filename, )
-                    smaller_dir = os.path.join(RUNNING_DIR, 'data', dir)
+                    smaller_dir = os.path.join(DATA_DIR, test_train_dir)
                     desired_dir = os.path.join(smaller_dir, subdir)
-                    if not os.path.isdir(smaller_dir):
-                        os.mkdir(smaller_dir)
-                    if not os.path.isdir(desired_dir):
-                        os.mkdir(desired_dir)
+                    dirs = [smaller_dir, desired_dir]
+                    for d in dirs:
+                        if not os.path.isdir(d):
+                            os.mkdir(d)
 
+                    source = os.path.join(
+                        subdir_path,
+                        filename,
+                    )
                     destination = os.path.join(desired_dir, filename)
                     if os.path.isfile(source):
+                        LOGGER.debug(
+                            f"copying source {source} to destination {destination}"
+                        )
                         shutil.copy(source, destination)
 
 
-TRAIN_DIR = os.path.join(RUNNING_DIR, "data", "train")
-TEST_DIR = os.path.join(RUNNING_DIR, "data", "test")
-
-
 def init():
-
-    required_paths = [
-        RUNNING_DIR,
-        os.path.join(RUNNING_DIR, "logs"),
-        os.path.join(RUNNING_DIR, "data"),
-        os.path.join(RUNNING_DIR, "models")
-    ]
-    for p in required_paths:
+    for p in REQUIRED_PATHS:
         if not os.path.exists(p):
             os.makedirs(p)
+            LOGGER.debug(f"created directory: {p}")
 
     required_files = {
-        os.path.join(required_paths[3], 'optimal_weights_98%.keras'): '1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ',
-        os.path.join(required_paths[2], 'Combined Dataset.zip'): '1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN'
+        os.path.join(
+            MODELS_DIR, "optimal_weights_98%.keras"
+        ): "1U9uywbNatIFAj6XlahT6BBrMqyLgd4qZ",
+        os.path.join(
+            DATA_DIR, "Combined Dataset.zip"
+        ): "1SQuB_8IL3s7vZPMeGkOZo116QSTMa6BN",
     }
 
     # Download data using the Kaggle API
@@ -545,7 +402,6 @@ def init():
             assert len(os.listdir(TRAIN_DIR)) > 0
             assert len(os.listdir(TEST_DIR)) > 0
             return True
-        return False
 
     if check_train_test_dirs():
         return True
@@ -559,31 +415,42 @@ def init():
 
 
 def main():
-    os.chdir(RUNNING_DIR)
     """
     Main function - perform model training over many iterations
     """
     init()
+    os.chdir(RUNNING_DIR)
 
-    # Create starting log, indicating structure of logs
-    f = open(os.path.join(RUNNING_DIR, "logs", "histories.log"), "a")
-    f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
-    f.write(
-        "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
-    )
-    f.close()
+    # Create starting log, indicating structure of log
+    with open(os.path.join(LOGS_DIR, "histories.log"), "a") as f:
+        f.write(f"\ntest run: {datetime.now().strftime('%m/%d/%Y, %H:%M:%S')}\n")
+        f.write(
+            "accuracy percent,percent of data,batch size,learning_rate,history.params,history.history['acc'],history.history['loss'],elapsed_time\n"
+        )
 
-    data_subets = [1]        # may need to downsample images before using more data
+    data_subsets = [1]  # may need to downsample images before using more data
     epochs = [250]  # [25, 50, 75, 100]  # 'random' scaling numbers
-    batch_sizes = [20]          # powers of 2
+    batch_sizes = [32]  # powers of 2
     learning_rates = [0.001]
-    for data_sub in data_subets:
-        for epoch in epochs:
-            for batch in batch_sizes:
-                for learn_rate in learning_rates:
-                    # Train the model over many iterations of the following:
-                    #   percentage of data, number of epochs, batch size, and learning rates
-                    result = train_model(data_sub, epoch, batch, learn_rate)
+    iters = 10
+    for _ in range(iters):
+        for data_sub in data_subsets:
+            for epoch in epochs:
+                for batch in batch_sizes:
+                    for learn_rate in learning_rates:
+                        # Train the model over many iterations of the following:
+                        #   percentage of data, number of epochs, batch size, and learning rates
+                        result = train_model(
+                            # data_sub, epoch, batch, learn_rate, show_plot=True
+                            data_sub,
+                            epoch,
+                            batch,
+                            learn_rate,
+                            show_plot=False,
+                        )
+                        if result > 0.99:
+                            print("found model with 99% accuracy!")
+                            return
     return result
 
 

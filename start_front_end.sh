@@ -1,1 +1,2 @@
-python src/alz_mri_cnn/front_end.py
+cd src/alz_mri_cnn
+python front_end.py
